@@ -10,7 +10,7 @@
 <title>Grade Narrative Helper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap">
 <style>
 /* Layout: top bar with class picker and three steps; rating view is a roster rail beside one student's sheet. */
 :root{
@@ -18,7 +18,7 @@
   --accent:#544681; --accent-soft:#ECE8F6; --on-accent:#FFFFFF; --mark:#B03A2E; --mark-soft:#F8E6E3; --ok:#2D6A4F;
   --display:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --ui:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --body:"Cardo", Georgia, "Times New Roman", serif;
+  --body:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --radius:8px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -28,12 +28,10 @@
   --bg:#15131C; --surface:#1D1A27; --sunk:#100E16; --ink:#E9E6F2; --muted:#A49FB8; --line:#312C40;
   --accent:#B7AAE6; --accent-soft:#2B2442; --on-accent:#17132A; --mark:#EE8A7C; --mark-soft:#3A1F1C; --ok:#7CC6A0; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;font-optical-sizing:auto}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2;font-optical-sizing:auto;letter-spacing:-.01em}
 h1{font-size:1.3rem;font-weight:700} h2{font-size:1.15rem;font-weight:650} h3{font-size:.95rem;font-weight:650}
 button,input,select,textarea{font:inherit;color:inherit}
-/* Buttons, tabs and small UI labels use DM Sans; reading text and entries use Cardo. */
-button,.btn,.chip,select,.colhead,.status,.ct,.rail .nm,.railhead,.score,.score input,.toast,label.btn,.steps button,input[type=number]{font-family:var(--ui)}
 .score input,.ct{font-variant-numeric:tabular-nums}
 select{font-size:.88rem}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
