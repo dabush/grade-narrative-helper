@@ -1,0 +1,1225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Click through ratings for each student, then export data for writing report card comments with an AI chat. Free, no account, and student data never leaves your browser.">
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<title>Grade Narrative Helper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<style>
+/* Layout: top bar with class picker and three steps; rating view is a roster rail beside one student's sheet. */
+:root{
+  --bg:#F4F6F9; --surface:#FFFFFF; --sunk:#EBEEF3; --ink:#1A2332; --muted:#5A6577; --line:#D9DEE6;
+  --accent:#27477A; --accent-soft:#E3EAF5; --on-accent:#FFFFFF; --mark:#B03A2E; --mark-soft:#F8E6E3; --ok:#2D6A4F;
+  --display:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --body:"Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151C; --surface:#19202A; --sunk:#0D1117; --ink:#E5E9F0; --muted:#9AA4B4; --line:#2B3442;
+  --accent:#8FB1E6; --accent-soft:#1F2D44; --on-accent:#0E1420; --mark:#EE8A7C; --mark-soft:#3A1F1C; --ok:#7CC6A0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151C; --surface:#19202A; --sunk:#0D1117; --ink:#E5E9F0; --muted:#9AA4B4; --line:#2B3442;
+  --accent:#8FB1E6; --accent-soft:#1F2D44; --on-accent:#0E1420; --mark:#EE8A7C; --mark-soft:#3A1F1C; --ok:#7CC6A0; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:1.35rem} h2{font-size:1.2rem} h3{font-size:1rem;font-family:var(--body);font-weight:700}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px}
+header.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:10px}
+.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto}
+.brand small{color:var(--muted);font-size:.8rem}
+.classpick{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.steps{display:flex;gap:4px;background:var(--sunk);padding:3px;border-radius:999px}
+.steps button{border:0;background:transparent;padding:6px 14px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:700;font-size:.9rem}
+.savebtn{position:relative;font-weight:700}
+.savebtn.dirty::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--mark);border:2px solid var(--surface)}
+.savebtn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.msg{font-size:.9rem;margin:0}
+[hidden]{display:none!important}
+.overlay{position:fixed;inset:0;background:rgb(10 15 25/.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:30}
+.modal{background:var(--surface);color:var(--ink);border-radius:12px;max-width:520px;width:100%;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 40px rgb(0 0 0/.3);max-height:100%;overflow:auto}
+.modal p{margin:0}
+.finished{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.copyform{background:var(--sunk);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:10px}
+.msg.err{color:var(--mark)} .msg.good{color:var(--ok)}
+.codebox{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.75rem;word-break:break-all}
+.steps button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0/.12)}
+.status{font-size:.8rem;color:var(--muted);min-width:9ch}
+main{padding-block:20px 60px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:6px 12px;cursor:pointer;font-size:.9rem}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:700}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--mark)}
+.btn.small{padding:3px 9px;font-size:.82rem}
+.btn:disabled{opacity:.5;cursor:default}
+input[type=text],input[type=number],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+textarea{width:100%;resize:vertical}
+.banner{background:var(--accent-soft);border-radius:var(--radius);padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:18px;font-size:.92rem}
+.banner p{margin:0;flex:1 1 280px}
+/* Setup */
+.setup{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:18px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.panel .hint{color:var(--muted);font-size:.85rem;margin:0}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{display:grid;gap:6px;align-items:center}
+.row.asg{grid-template-columns:minmax(0,1fr) 7.5rem 4.5rem 2rem}
+.row.ms{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 2rem}
+.row.bh{grid-template-columns:minmax(0,1fr) 2rem}
+.row.stu{grid-template-columns:1.6rem minmax(0,1fr) minmax(0,1fr) 7rem 5.5rem 2rem}
+.row.stu input[type=checkbox]{width:1.05rem;height:1.05rem;margin:0;accent-color:var(--accent)}
+.bulk{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.88rem}
+.preview{background:var(--sunk);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:10px}
+.ptable{overflow-x:auto}
+.ptable table{border-collapse:collapse;width:100%;font-size:.88rem}
+.ptable th{text-align:left;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:400;padding:4px 8px}
+.ptable td{padding:4px 8px;border-top:1px solid var(--line)}
+.ptable td.miss{color:var(--mark)}
+.colhead{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
+.field input{color:var(--ink)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+@media (max-width:560px){
+  .row.asg{grid-template-columns:minmax(0,1fr) 6.5rem 2rem}
+  .row.asg .max{grid-column:2}
+  .row.stu{grid-template-columns:1.6rem minmax(0,1fr) minmax(0,1fr) 2rem}
+  .row.stu [data-del]{grid-row:1;grid-column:4}
+  .row.stu .pron{grid-row:2;grid-column:2}
+  .row.stu .sid{grid-row:2;grid-column:3}
+  .row.ms{grid-template-columns:minmax(0,1fr) 2rem}
+  .row.ms .desc{grid-column:1}
+  .colhead.hide-sm{display:none}
+}
+/* Rate */
+.rate{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start}
+.rail{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:6px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);max-height:calc(100vh - 90px);overflow:auto}
+.rail button{display:grid;grid-template-columns:1fr auto;gap:2px 8px;width:100%;text-align:left;border:0;background:transparent;border-radius:6px;padding:7px 9px;cursor:pointer}
+.rail button[aria-current="true"]{background:var(--accent-soft)}
+.rail .nm{font-weight:700;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail .ct{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{grid-column:1/-1;height:3px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.bar i.done{background:var(--ok)}
+.mobilepick{display:none}
+.modebar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:14px}
+.modebar .steps button{font-size:.85rem;padding:5px 12px}
+.railhead{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 9px 2px}
+.fillbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.85rem;color:var(--muted);background:var(--sunk);border-radius:var(--radius);padding:8px 10px}
+.item.stu .lbl{font-weight:600}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:20px;min-width:0}
+.sheethead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center}
+.sheethead .who{display:flex;flex-direction:column}
+.sheethead .who span{color:var(--muted);font-size:.85rem}
+.group h3{margin-bottom:8px;display:flex;gap:8px;align-items:baseline}
+.group h3 small{font-weight:400;color:var(--muted);font-size:.8rem}
+.item{display:grid;grid-template-columns:minmax(150px,14rem) minmax(0,1fr);gap:6px 14px;align-items:center;padding-block:8px;border-top:1px solid var(--line)}
+.item .lbl{font-weight:700;font-size:.92rem}
+.item .lbl span{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.ctrls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;cursor:pointer;font-size:.85rem}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+.chip.neg[aria-pressed="true"]{background:var(--mark);border-color:var(--mark);color:var(--on-accent)}
+.chip.flag{border-style:dashed}
+.chip.flag[aria-pressed="true"]{background:var(--mark-soft);color:var(--mark);border-color:var(--mark);border-style:solid}
+.score{display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem}
+.score input{width:4.6rem;text-align:right}
+.sep{width:1px;height:20px;background:var(--line)}
+.navrow{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+@media (max-width:760px){
+  header.top{position:static}
+  .rate{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+  .mobilepick{display:flex;gap:6px}
+  .mobilepick select{flex:1}
+  .item{grid-template-columns:minmax(0,1fr)}
+}
+/* Export */
+.export{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.export{grid-template-columns:minmax(0,1fr)}}
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;min-width:0}
+.card header{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}
+.card pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--body);font-size:.86rem;color:var(--ink)}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.empty{color:var(--muted);text-align:center;padding:40px 16px;background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:.88rem;z-index:20}
+.confirm{display:inline-flex;gap:6px;align-items:center;font-size:.85rem;color:var(--mark)}
+@media (prefers-reduced-motion:no-preference){.chip,.btn{transition:background .12s,border-color .12s}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Grade Narrative Helper</h1><small id="saveStatus" class="status">Loading…</small></div>
+    <div class="classpick">
+      <label for="classSel" class="colhead">Class</label>
+      <select id="classSel"></select>
+      <button class="btn small" id="newClass">New class</button>
+      <button class="btn small savebtn" id="saveBtn">Save progress</button>
+    </div>
+    <nav class="steps" role="tablist" aria-label="Steps">
+      <button role="tab" id="tab-setup" data-view="setup">1 · Set up</button>
+      <button role="tab" id="tab-rate" data-view="rate">2 · Rate students</button>
+      <button role="tab" id="tab-export" data-view="export">3 · Export</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+<div class="toast" id="toast" hidden></div>
+<div class="overlay" id="welcome" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <h2 id="welcomeTitle">Before you start: save your work yourself</h2>
+    <p>This tool doesn't store your data online. There's no account and no server, so nobody else can see your students' information, and nobody can recover it for you either.</p>
+    <p><strong>Before you close this tab, click Save progress</strong> and download a save file or copy your save code. Next time, open Save progress and load that file or code to pick up where you left off.</p>
+    <p class="hint">This browser keeps a temporary copy as you work, but clearing browser data or switching computers erases it. Don't rely on it.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn primary" id="welcomeOk">I understand</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+const RATING_DEFAULT = ["Excellent","Proficient","Developing","Needs support"];
+const FREQ_DEFAULT = ["Consistently","Usually","Sometimes","Rarely"];
+const TYPES = ["Essay","Quiz","Homework","Test","Project","Presentation","Other"];
+const DEFAULT_PROMPT = "Write a report card comment for each student below. Use only the information provided; do not invent achievements or scores. For each student, write 3 to 5 sentences in a warm, professional voice: name one specific strength, one area for growth, and one concrete next step. Use the student's first name and pronouns. Mention numbers only when they make the comment clearer.";
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- storage: this browser only; save codes carry work between browsers ---------- */
+const LS = {
+  get(k){ try { const v = localStorage.getItem("cdb_" + k); return v ? JSON.parse(v) : null; } catch(e){ return null; } },
+  set(k, v){ try { localStorage.setItem("cdb_" + k, JSON.stringify(v)); return true; } catch(e){ return false; } },
+  del(k){ try { localStorage.removeItem("cdb_" + k); } catch(e){} }
+};
+const store = {
+  pending: new Map(), timers: new Map(), ok: true,
+  async get(k){ return this.pending.has(k) ? this.pending.get(k) : LS.get(k); },
+  put(k, v){
+    this.pending.set(k, v); setStatus("saving");
+    clearTimeout(this.timers.get(k));
+    this.timers.set(k, setTimeout(() => this.flush(k), 400));
+    if (k !== "index") markDirty();
+  },
+  flush(k){
+    if (!this.pending.has(k)) return;
+    this.ok = LS.set(k, this.pending.get(k)) && this.ok;
+    this.pending.delete(k);
+    if (!this.pending.size) setStatus(this.ok ? "saved" : "error");
+  },
+  async del(k){ this.pending.delete(k); LS.del(k); }
+};
+let dirty = !!LS.get("dirty");
+function markDirty(){ if (!dirty) { dirty = true; LS.set("dirty", true); } renderSaveBtn(); }
+function markBackedUp(){ dirty = false; LS.set("dirty", false); LS.set("lastBackup", new Date().toISOString()); renderSaveBtn(); }
+let storageError = false;
+function renderSaveBtn(){
+  const b = $("#saveBtn"), el = $("#saveStatus"); if (!b) return;
+  b.classList.toggle("dirty", dirty);
+  b.title = dirty ? "You have changes that aren't in a save file or code yet" : "Your latest work is in a save file or code";
+  el.textContent = dirty ? "Unsaved changes" : LS.get("lastBackup") ? "Saved to a file" : "No changes yet";
+  if (storageError && dirty) el.textContent = "Unsaved changes. Save before closing.";
+  el.style.color = dirty ? "var(--mark)" : "";
+}
+function setStatus(s){ if (s === "error") storageError = true; renderSaveBtn(); }
+// Ask before leaving with work that isn't in a save file or code.
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; return ""; } });
+
+/* ---------- state ---------- */
+let index = { classes: [], current: null };
+let cls = null;      // current class setup + roster
+let marks = {};      // studentId -> {a:{aid:{score,rating,late}}, m:{mid:rating}, b:{bid:rating}, note}
+let view = "setup";
+let curStudent = null;
+let exportOpts = { prompt: true, promptText: DEFAULT_PROMPT, scores: true };
+
+const saveIndex = () => store.put("index", index);
+const saveClass = () => { store.put("class_" + cls.id, cls); const e = index.classes.find(c => c.id === cls.id); if (e && e.name !== cls.name){ e.name = cls.name; saveIndex(); renderClassPicker(); } };
+const saveMarks = () => store.put("marks_" + cls.id, marks);
+
+function newClassObj(name){
+  return { id: uid(), name, period: "", scale: [...RATING_DEFAULT], freq: [...FREQ_DEFAULT], assignments: [], milestones: [], behaviors: [], students: [] };
+}
+
+function sampleClass(){
+  const c = newClassObj("English 10, Period 3 (example)");
+  c.example = true; c.period = "Quarter 1";
+  const A = (name, type, max) => ({ id: uid(), name, type, max });
+  c.assignments = [A("Personal narrative","Essay",100), A("Of Mice and Men, ch. 1–3","Quiz",10), A("Of Mice and Men, ch. 4–6","Quiz",10), A("Literary analysis paragraph","Essay",20), A("Reading log, weeks 1–3","Homework",""), A("Vocabulary set 1","Homework","")];
+  c.milestones = [
+    { id: uid(), name: "Close reading", desc: "Notices word choice, imagery and tone and explains their effect" },
+    { id: uid(), name: "Thesis writing", desc: "States a clear, arguable claim" },
+    { id: uid(), name: "Using textual evidence", desc: "Selects and integrates relevant quotations" },
+    { id: uid(), name: "Analysis", desc: "Explains how evidence supports the claim" },
+    { id: uid(), name: "Conventions", desc: "Grammar, punctuation and MLA format" }];
+  c.behaviors = ["Participates in discussion","Comes prepared","Uses feedback to revise","Meets deadlines"].map(n => ({ id: uid(), name: n }));
+  const S = (first, last, pronouns, sid) => ({ id: uid(), first, last, pronouns, sid });
+  c.students = [S("Maya","Rivera","she/her","10421"), S("Jordan","Okafor","he/him","10422"), S("Sam","Lindqvist","they/them","10423"), S("Priya","Natarajan","she/her","10424"), S("Ethan","Brooks","he/him","10425"), S("Lucía","Herrera","she/her","10426")];
+  const m = {};
+  const [na, q1, q2, ap, rl, vs] = c.assignments.map(a => a.id);
+  const [cr, th, ev, an, cv] = c.milestones.map(x => x.id);
+  const [p, pr, fb, dl] = c.behaviors.map(x => x.id);
+  m[c.students[0].id] = { a:{[na]:{score:"92",rating:"Excellent"},[q1]:{score:"9",rating:"Excellent"},[q2]:{score:"8",rating:"Proficient"},[ap]:{score:"17",rating:"Proficient"},[rl]:{rating:"Excellent"},[vs]:{rating:"Proficient"}},
+    m:{[cr]:"Excellent",[th]:"Proficient",[ev]:"Excellent",[an]:"Developing",[cv]:"Proficient"}, b:{[p]:"Consistently",[pr]:"Consistently",[fb]:"Usually",[dl]:"Consistently"},
+    note:"Led our Socratic seminar on loneliness in Of Mice and Men." };
+  m[c.students[1].id] = { a:{[na]:{score:"74",rating:"Developing",late:true},[q1]:{score:"6",rating:"Developing"},[q2]:{score:"8",rating:"Proficient"},[rl]:{rating:"Missing"},[vs]:{rating:"Proficient"}},
+    m:{[cr]:"Proficient",[th]:"Developing",[ev]:"Developing"}, b:{[p]:"Usually",[dl]:"Sometimes"}, note:"" };
+  return { c, m };
+}
+
+/* ---------- loading ---------- */
+async function boot(){
+  store.ok = LS.set("probe", 1);
+  index = (await store.get("index")) || { classes: [], current: null };
+  if (!index.classes.length) {
+    const { c, m } = sampleClass();
+    index = { classes: [{ id: c.id, name: c.name }], current: c.id };
+    store.put("class_" + c.id, c); store.put("marks_" + c.id, m); saveIndex();
+    dirty = false; LS.set("dirty", false);
+  }
+  view = "rate";
+  await openClass(index.current || index.classes[0].id);
+  setStatus(store.ok ? "saved" : "error");
+  renderSaveBtn();
+
+}
+
+async function openClass(id){
+  index.current = id; saveIndex();
+  cls = (await store.get("class_" + id)) || store.pending.get("class_" + id) || newClassObj("Untitled class");
+  cls.id = id;
+  for (const k of ["assignments","milestones","behaviors","students"]) cls[k] ||= [];
+  cls.scale ||= [...RATING_DEFAULT]; cls.freq ||= [...FREQ_DEFAULT];
+  marks = (await store.get("marks_" + id)) || store.pending.get("marks_" + id) || {};
+  curStudent = cls.students[0]?.id ?? null;
+  renderClassPicker();
+  go(!cls.students.length || !totalItems() ? "setup" : view);
+}
+
+function renderClassPicker(){
+  $("#classSel").innerHTML = index.classes.map(c => `<option value="${esc(c.id)}"${c.id === index.current ? " selected" : ""}>${esc(c.name)}</option>`).join("");
+}
+$("#classSel").addEventListener("change", e => openClass(e.target.value));
+$("#newClass").addEventListener("click", () => {
+  const c = newClassObj("New class");
+  index.classes.push({ id: c.id, name: c.name });
+  store.put("class_" + c.id, c); store.put("marks_" + c.id, {});
+  view = "setup"; openClass(c.id);
+  toast("New class created. To reuse a setup, use Copy to a new class instead.");
+});
+
+document.querySelectorAll(".steps button").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
+$("#saveBtn").addEventListener("click", () => go("save"));
+document.addEventListener("click", e => { if (e.target.closest("[data-resume]")) go("save"); });
+function go(v){
+  view = v;
+  document.querySelectorAll(".steps button").forEach(b => b.setAttribute("aria-selected", b.dataset.view === v));
+  $("#saveBtn").setAttribute("aria-pressed", v === "save");
+  ({ setup: renderSetup, rate: renderRate, export: renderExport, save: renderSave })[v]();
+  window.scrollTo({ top: 0 });
+}
+
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2200);
+}
+
+/* ---------- step 1: setup ---------- */
+function renderSetup(){
+  const m = $("#main");
+  m.innerHTML = `
+  ${cls.example ? `<div class="banner"><p><strong>This is an example class</strong> with made-up students so you can try every step. Create your own class when you're ready, or pick up where you left off.</p><button class="btn small" data-resume>Resume from a save code</button><span id="exDel"></span></div>` : ""}
+  <div class="setup">
+    <section class="panel">
+      <header><h2>Class</h2></header>
+      <div class="two">
+        <label class="field">Class name<input type="text" id="c-name" value="${esc(cls.name)}" placeholder="English 10, Period 3"></label>
+        <label class="field">Grading period<input type="text" id="c-period" value="${esc(cls.period)}" placeholder="Quarter 1"></label>
+      </div>
+      <div class="actions"><button class="btn small" data-copyclass>Copy to a new class</button><span id="classDel"></span></div>
+      <div class="copyslot" hidden></div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Roster</h2><span class="hint">${cls.students.length} students</span></header>
+      <p class="hint">Upload a CSV, or paste names one per line in any common format: "Maya Rivera", "Rivera, Maya", "RIVERA Maya", or columns copied from a spreadsheet. Pronouns and student IDs on the same line are picked up too. You'll see a preview before anything is added.</p>
+      <div class="actions">
+        <label class="btn primary" for="rosterFile" style="cursor:pointer">Upload roster CSV</label>
+        <input type="file" id="rosterFile" accept=".csv,.txt,.tsv,text/csv" hidden>
+        <button class="btn" id="pasteToggle">Paste names</button>
+        <button class="btn" id="addStu">Add student</button>
+        ${cls.students.length ? `<span id="clearStu"></span>` : ""}
+      </div>
+      <div id="pasteBox" hidden>
+        <textarea id="pasteText" rows="5" placeholder="Rivera, Maya&#10;Jordan Okafor&#10;Lucía de la Cruz, she/her, 10426&#10;…"></textarea>
+        <div class="actions" style="margin-top:6px"><button class="btn primary small" id="pasteAdd">Preview names</button></div>
+      </div>
+      <div id="importPreview"></div>
+      <div class="bulk" id="bulk"${cls.students.length ? "" : " hidden"}>
+        <label for="bulkPron">Set pronouns for selected students:</label>
+        <select id="bulkPron"><option value="">Choose…</option>${PRONOUNS.map(p => `<option>${p}</option>`).join("")}<option value="__clear">Clear pronouns</option></select>
+        <button class="btn small" id="bulkApply" disabled>Apply to 0 selected</button>
+        <span id="removeSel"></span>
+      </div>
+      <div class="rows" id="stuRows"></div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Major assignments</h2><button class="btn small" id="addAsg">Add assignment</button></header>
+      <p class="hint">Points are optional. Leave them blank to rate the assignment with buttons only.</p>
+      <div class="row asg"><span class="colhead">Assignment</span><span class="colhead">Type</span><span class="colhead max">Points</span><span></span></div>
+      <div class="rows" id="asgRows"></div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Learning milestones</h2><button class="btn small" id="addMs">Add milestone</button></header>
+      <p class="hint">The skills students are working toward this grading period.</p>
+      <div class="rows" id="msRows"></div>
+      <div class="actions"><button class="btn small" id="starter">Add English starter set</button></div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Classroom behaviors <small class="hint">(optional)</small></h2><button class="btn small" id="addBh">Add behavior</button></header>
+      <div class="rows" id="bhRows"></div>
+      <div class="actions"><button class="btn small" id="bhStarter">Add behavior starter set</button></div>
+    </section>
+
+    <section class="panel">
+      <header><h2>Rating buttons</h2></header>
+      <label class="field">Assignment and milestone ratings, best first, separated by commas<input type="text" id="c-scale" value="${esc(cls.scale.join(", "))}"></label>
+      <label class="field">Behavior ratings, most often first<input type="text" id="c-freq" value="${esc(cls.freq.join(", "))}"></label>
+      <p class="hint">Assignments also get a "Missing" button and a "Late" flag.</p>
+    </section>
+  </div>
+  <div class="actions" style="margin-top:18px;justify-content:flex-end"><button class="btn primary" id="toRate">Next: rate students</button></div>`;
+
+  $("#c-name").addEventListener("input", e => { cls.name = e.target.value || "Untitled class"; saveClass(); });
+  $("#c-period").addEventListener("input", e => { cls.period = e.target.value; saveClass(); });
+  const splitList = v => v.split(",").map(s => s.trim()).filter(Boolean);
+  $("#c-scale").addEventListener("change", e => { const v = splitList(e.target.value); if (v.length) { cls.scale = v; saveClass(); } });
+  $("#c-freq").addEventListener("change", e => { const v = splitList(e.target.value); if (v.length) { cls.freq = v; saveClass(); } });
+  $("#toRate").addEventListener("click", () => go("rate"));
+
+  confirmButton($("#classDel"), "Delete this class", async () => {
+    await store.del("class_" + cls.id); await store.del("marks_" + cls.id);
+    index.classes = index.classes.filter(c => c.id !== cls.id);
+    if (!index.classes.length) { const c = newClassObj("New class"); index.classes.push({ id: c.id, name: c.name }); store.put("class_" + c.id, c); }
+    saveIndex(); view = "setup"; openClass(index.classes[0].id); toast("Class deleted");
+  });
+  if (cls.example) confirmButton($("#exDel"), "Remove example", () => $("#classDel button").click(), true);
+
+  renderList("asgRows", cls.assignments, a => `
+    <div class="row asg" data-id="${a.id}">
+      <input type="text" data-f="name" value="${esc(a.name)}" aria-label="Assignment name" placeholder="Assignment name">
+      <select data-f="type" aria-label="Type">${TYPES.map(t => `<option${t === a.type ? " selected" : ""}>${t}</option>`).join("")}</select>
+      <input type="number" class="max" data-f="max" value="${esc(a.max)}" min="0" aria-label="Points possible" placeholder="—">
+      <button class="btn ghost small" data-del aria-label="Remove ${esc(a.name)}">✕</button>
+    </div>`);
+  renderList("msRows", cls.milestones, x => `
+    <div class="row ms" data-id="${x.id}">
+      <input type="text" data-f="name" value="${esc(x.name)}" aria-label="Milestone" placeholder="Skill, e.g. Close reading">
+      <input type="text" class="desc" data-f="desc" value="${esc(x.desc)}" aria-label="Description" placeholder="What it looks like (optional)">
+      <button class="btn ghost small" data-del aria-label="Remove ${esc(x.name)}">✕</button>
+    </div>`);
+  renderList("bhRows", cls.behaviors, x => `
+    <div class="row bh" data-id="${x.id}">
+      <input type="text" data-f="name" value="${esc(x.name)}" aria-label="Behavior" placeholder="e.g. Participates in discussion">
+      <button class="btn ghost small" data-del aria-label="Remove ${esc(x.name)}">✕</button>
+    </div>`);
+  renderStudents();
+
+  const add = (list, obj, rowsId) => () => { list.push(obj()); saveClass(); renderSetup(); const last = document.querySelector(`#${rowsId} .row:last-child input`); last?.focus(); };
+  $("#addAsg").addEventListener("click", add(cls.assignments, () => ({ id: uid(), name: "", type: "Essay", max: "" }), "asgRows"));
+  $("#addMs").addEventListener("click", add(cls.milestones, () => ({ id: uid(), name: "", desc: "" }), "msRows"));
+  $("#addBh").addEventListener("click", add(cls.behaviors, () => ({ id: uid(), name: "" }), "bhRows"));
+  $("#addStu").addEventListener("click", add(cls.students, () => ({ id: uid(), first: "", last: "", pronouns: "", sid: "" }), "stuRows"));
+  $("#starter").addEventListener("click", () => {
+    const have = new Set(cls.milestones.map(x => x.name.toLowerCase()));
+    [["Close reading","Notices word choice, imagery and tone and explains their effect"],["Thesis writing","States a clear, arguable claim"],["Using textual evidence","Selects and integrates relevant quotations"],["Analysis","Explains how evidence supports the claim"],["Organization","Logical paragraphs and transitions"],["Conventions","Grammar, punctuation and MLA format"],["Discussion","Builds on others' ideas with evidence"]]
+      .filter(([n]) => !have.has(n.toLowerCase())).forEach(([name, desc]) => cls.milestones.push({ id: uid(), name, desc }));
+    saveClass(); renderSetup(); toast("Starter milestones added");
+  });
+  $("#bhStarter").addEventListener("click", () => {
+    const have = new Set(cls.behaviors.map(x => x.name.toLowerCase()));
+    const add = ["Stays on task", "Does not create distractions for others", "Positive attitude and ready to learn", "Completes work on time", "Completes work thoroughly", "Participates in class discussion", "Comes prepared with materials", "Works well with peers", "Uses feedback to improve", "Respectful to classmates and teacher"]
+      .filter(n => !have.has(n.toLowerCase()));
+    add.forEach(name => cls.behaviors.push({ id: uid(), name }));
+    saveClass(); renderSetup(); toast(add.length ? `Added ${add.length} behaviors. Remove any you don't need.` : "Those behaviors are already on the list");
+  });
+  $("#pasteToggle").addEventListener("click", () => { const b = $("#pasteBox"); b.hidden = !b.hidden; if (!b.hidden) $("#pasteText").focus(); });
+  $("#pasteAdd").addEventListener("click", () => previewRoster($("#pasteText").value));
+  $("#rosterFile").addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => previewRoster(String(r.result)); r.readAsText(f); e.target.value = "";
+  });
+}
+
+let picked = new Set();
+function renderStudents(){
+  picked = new Set([...picked].filter(id => cls.students.some(s => s.id === id)));
+  const allOn = cls.students.length && picked.size === cls.students.length;
+  const head = `<div class="row stu"><input type="checkbox" id="pickAll" aria-label="Select all students"${allOn ? " checked" : ""}><span class="colhead">First</span><span class="colhead">Last</span><span class="colhead hide-sm">Pronouns</span><span class="colhead hide-sm">ID</span><span></span></div>`;
+  renderList("stuRows", cls.students, s => `
+    <div class="row stu" data-id="${s.id}">
+      <input type="checkbox" class="pick" aria-label="Select ${esc(nameOf(s))}"${picked.has(s.id) ? " checked" : ""}>
+      <input type="text" data-f="first" value="${esc(s.first)}" aria-label="First name" placeholder="First">
+      <input type="text" data-f="last" value="${esc(s.last)}" aria-label="Last name" placeholder="Last">
+      <select class="pron" data-f="pronouns" aria-label="Pronouns for ${esc(nameOf(s))}">${[...new Set(["", ...PRONOUNS, s.pronouns || ""])].map(p => `<option value="${esc(p)}"${p === (s.pronouns || "") ? " selected" : ""}>${esc(p) || "—"}</option>`).join("")}</select>
+      <input type="text" class="sid" data-f="sid" value="${esc(s.sid)}" aria-label="Student ID" placeholder="ID">
+      <button class="btn ghost small" data-del aria-label="Remove ${esc(s.first)}">✕</button>
+    </div>`, head);
+  const box = $("#stuRows"), apply = $("#bulkApply");
+  const sync = () => {
+    apply.textContent = `Apply to ${picked.size} selected`;
+    apply.disabled = !picked.size || !$("#bulkPron").value;
+    const all = $("#pickAll"); if (all) { all.checked = picked.size === cls.students.length; all.indeterminate = picked.size > 0 && !all.checked; }
+  };
+  box.addEventListener("change", e => {
+    if (e.target.id === "pickAll") { picked = e.target.checked ? new Set(cls.students.map(s => s.id)) : new Set(); box.querySelectorAll(".pick").forEach(c => c.checked = e.target.checked); }
+    else if (e.target.classList.contains("pick")) { const id = e.target.closest(".row").dataset.id; e.target.checked ? picked.add(id) : picked.delete(id); }
+    sync();
+  });
+  $("#bulkPron").onchange = sync;
+  apply.onclick = () => {
+    const v = $("#bulkPron").value; if (!v || !picked.size) return;
+    const val = v === "__clear" ? "" : v;
+    cls.students.forEach(s => { if (picked.has(s.id)) s.pronouns = val; });
+    const n = picked.size; picked = new Set();
+    saveClass(); renderSetup();
+    toast(val ? `Set ${val} for ${n} student${n === 1 ? "" : "s"}` : `Cleared pronouns for ${n} student${n === 1 ? "" : "s"}`);
+  };
+  sync();
+  const removeStudents = ids => {
+    cls.students = cls.students.filter(s => !ids.has(s.id));
+    ids.forEach(id => delete marks[id]);
+    picked = new Set(); saveClass(); saveMarks(); renderSetup();
+    toast(`Removed ${ids.size} student${ids.size === 1 ? "" : "s"}`);
+  };
+  inlineConfirm($("#clearStu"), "Remove all students", () => `Remove all ${cls.students.length} students and their ratings?`, () => removeStudents(new Set(cls.students.map(s => s.id))));
+  const drawRemoveSel = () => inlineConfirm($("#removeSel"), `Remove ${picked.size} selected`, () => `Remove ${picked.size} student${picked.size === 1 ? "" : "s"} and their ratings?`, () => removeStudents(new Set(picked)), !picked.size);
+  drawRemoveSel();
+  box.addEventListener("change", drawRemoveSel);
+}
+
+// A button that turns into "Are you sure? Remove / Keep" in place (the viewer blocks confirm()).
+function inlineConfirm(slot, label, question, onYes, disabled){
+  if (!slot) return;
+  const draw = () => {
+    slot.innerHTML = `<button class="btn small"${disabled ? " disabled" : ""}>${esc(label)}</button>`;
+    slot.firstChild.onclick = () => {
+      slot.innerHTML = `<span class="confirm">${esc(question())} <button class="btn small" data-y>Remove</button><button class="btn small" data-n>Keep</button></span>`;
+      slot.querySelector("[data-y]").onclick = onYes; slot.querySelector("[data-n]").onclick = draw;
+    };
+  };
+  draw();
+}
+
+function renderList(id, list, tpl, head = ""){
+  const box = $("#" + id);
+  box.innerHTML = list.length ? head + list.map(tpl).join("") : `<p class="hint">None yet.</p>`;
+  box.oninput = box.onchange = e => {
+    const row = e.target.closest(".row[data-id]"), f = e.target.dataset.f;
+    if (!row || !f) return;
+    const item = list.find(x => x.id === row.dataset.id); if (!item) return;
+    item[f] = e.target.value; saveClass();
+  };
+  box.onclick = e => {
+    if (!e.target.closest("[data-del]")) return;
+    const row = e.target.closest(".row[data-id]");
+    const i = list.findIndex(x => x.id === row.dataset.id);
+    if (i > -1) { list.splice(i, 1); saveClass(); renderSetup(); }
+  };
+}
+
+function confirmButton(slot, label, onYes, primary){
+  if (!slot) return;
+  const draw = () => {
+    slot.innerHTML = `<button class="btn ${primary ? "" : "ghost"} small">${esc(label)}</button>`;
+    slot.firstChild.onclick = () => {
+      slot.innerHTML = `<span class="confirm">Delete the class and all its ratings? <button class="btn small" data-y>Delete</button><button class="btn small" data-n>Keep</button></span>`;
+      slot.querySelector("[data-y]").onclick = onYes; slot.querySelector("[data-n]").onclick = draw;
+    };
+  };
+  draw();
+}
+
+/* roster parsing */
+function parseDelimited(text, delim){
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i+1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === delim) { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i+1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  row.push(cell); rows.push(row);
+  return rows.map(r => r.map(c => c.trim())).filter(r => r.some(Boolean));
+}
+const PRONOUNS = ["she/her", "he/him", "they/them", "she/they", "he/they"];
+const PRON_RE = /\b(she|he|they|ze|xe)\s*\/\s*(her|him|them|they|she|he|zir|hir|xem)\b/i;
+const SUFFIX_RE = /^(jr|sr|ii|iii|iv|v)\.?$/i;
+const PARTICLES = new Set(["de","del","della","der","den","di","da","dos","das","du","la","le","van","von","st","st.","bin","ibn","al","el","ten","ter","mac"]);
+const isInitial = t => /^[A-Za-z]\.?$/.test(t);
+const isCaps = t => /\p{L}/u.test(t) && t === t.toUpperCase() && t.replace(/[^\p{L}]/gu, "").length > 1;
+const normHead = c => c.toLowerCase().replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
+const HEAD = {
+  first: /^(first|first name|firstname|given|given name|preferred|preferred name|student first name)$/,
+  last: /^(last|last name|lastname|surname|family name|student last name)$/,
+  full: /^(name|names|student|students|student name|full name|last first|last name first name)$/,
+  pron: /^(pronoun|pronouns|student pronouns)$/,
+  sid: /^(id|student id|student number|id number|sis id|local id|student no|number)$/
+};
+
+const fixCaps = x => isCaps(x) ? x.toLowerCase().replace(/(^|[\s'\-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : x;
+function parseName(raw){ const n = parseNameRaw(raw); return n && { first: n.first.split(" ").map(fixCaps).join(" "), last: n.last.split(" ").map(fixCaps).join(" ") }; }
+// Turn one name string into {first, last}. Handles "Last, First", "First Last", "LAST First",
+// particles ("de la Cruz"), suffixes ("Jr.") and middle initials.
+function parseNameRaw(raw){
+  let str = raw.replace(/\s+/g, " ").replace(/^[\s,;]+|[\s,;]+$/g, "");
+  if (!str) return null;
+  if (str.includes(",")) {
+    const parts = str.split(",").map(x => x.trim()).filter(Boolean);
+    let last = parts.shift() || "";
+    if (parts.length > 1 && SUFFIX_RE.test(parts[0])) last += ", " + parts.shift();
+    let firstTokens = (parts.join(" ")).split(" ").filter(Boolean);
+    if (firstTokens.length > 1 && SUFFIX_RE.test(firstTokens[firstTokens.length - 1])) last += " " + firstTokens.pop();
+    while (firstTokens.length > 1 && isInitial(firstTokens[firstTokens.length - 1])) firstTokens.pop();
+    return { first: firstTokens.join(" "), last };
+  }
+  let t = str.split(" ");
+  if (t.length === 1) return { first: t[0], last: "" };
+  let suffix = "";
+  if (t.length > 2 && SUFFIX_RE.test(t[t.length - 1])) suffix = " " + t.pop();
+  // School exports often write "RIVERA Maya": leading all-caps words are the last name.
+  if (isCaps(t[0]) && t.some(x => !isCaps(x))) {
+    const k = t.findIndex(x => !isCaps(x));
+    return { first: t.slice(k).join(" "), last: t.slice(0, k).join(" ") + suffix };
+  }
+  let i = t.findIndex((x, j) => j > 0 && j < t.length - 1 && PARTICLES.has(x.toLowerCase()));
+  if (i < 0) i = t.length - 1;
+  let first = t.slice(0, i);
+  while (first.length > 1 && isInitial(first[first.length - 1])) first.pop();
+  return { first: first.join(" "), last: t.slice(i).join(" ") + suffix };
+}
+
+// Pull pronouns and a student ID out of a line or cell, returning what's left.
+function pullExtras(str){
+  let pronouns = "", sid = "";
+  const pm = str.match(PRON_RE);
+  if (pm) { pronouns = `${pm[1]}/${pm[2]}`.toLowerCase(); str = str.replace(pm[0], " "); }
+  const im = str.match(/(?:^|[\s,(\[#])(\d{3,}[A-Za-z0-9-]*|[A-Za-z]{0,3}\d{4,})(?=$|[\s,)\]])/);
+  if (im) { sid = im[1]; str = str.replace(im[1], " "); }
+  str = str.replace(/^\s*\d{1,3}\s*[.)]\s+/, "").replace(/[()\[\]#"]/g, " ").replace(/(\s*,\s*)+/g, ", ");
+  return { rest: str, pronouns, sid };
+}
+
+function parseRoster(text){
+  text = text.replace(/^﻿/, "");
+  const tabbed = text.includes("\t");
+  const rows = parseDelimited(text, tabbed ? "\t" : ",");
+  if (!rows.length) return [];
+  const heads = rows[0].map(normHead);
+  const col = k => heads.findIndex(h => HEAD[k].test(h));
+  const cols = { first: col("first"), last: col("last"), full: col("full"), pron: col("pron"), sid: col("sid") };
+  const hasHeader = Object.values(cols).some(i => i > -1) && heads.every(h => !h || Object.values(HEAD).some(re => re.test(h)) || heads.length > 2);
+  const out = [];
+  if (hasHeader) {
+    for (const r of rows.slice(1)) {
+      let n = cols.first > -1 || cols.last > -1 ? { first: r[cols.first] || "", last: r[cols.last] || "" } : parseName(pullExtras(r[cols.full] || r[0] || "").rest);
+      if (!n || (!n.first && !n.last)) continue;
+      out.push({ ...n, pronouns: cols.pron > -1 ? (r[cols.pron] || "") : "", sid: cols.sid > -1 ? (r[cols.sid] || "") : "" });
+    }
+    return out;
+  }
+  // No header: read each line on its own, so mixed formats in one paste still work.
+  const lines = tabbed ? rows : text.split(/\r?\n/).map(l => [l]);
+  for (const r of lines) {
+    let pronouns = "", sid = "";
+    const cells = [];
+    for (const c of r) {
+      const x = pullExtras(c);
+      pronouns ||= x.pronouns; sid ||= x.sid;
+      const rest = x.rest.replace(/^[\s,]+|[\s,]+$/g, "");
+      if (rest) cells.push(rest);
+    }
+    let n = null;
+    if (cells.length === 1) n = parseName(cells[0]);
+    else if (cells.length >= 2) n = /[\s,]/.test(cells[0]) ? parseName(cells[0]) : { last: cells[0], first: cells[1] }; // spreadsheet columns: Last | First
+    if (!n || (!n.first && !n.last)) continue;
+    out.push({ ...n, pronouns, sid });
+  }
+  return out;
+}
+
+let pendingImport = [];
+function previewRoster(text){
+  pendingImport = parseRoster(text);
+  const box = $("#importPreview");
+  if (!pendingImport.length) { box.innerHTML = `<p class="msg err">No names found. Put one student on each line.</p>`; return; }
+  const seen = new Set(cls.students.map(s => (s.first + "|" + s.last).toLowerCase()));
+  const draw = () => {
+    const dupes = pendingImport.filter(s => seen.has((s.first + "|" + s.last).toLowerCase())).length;
+    box.innerHTML = `<div class="preview">
+      <p class="msg"><strong>Found ${pendingImport.length} name${pendingImport.length === 1 ? "" : "s"}.</strong> Check that first and last names are in the right columns before adding.${dupes ? ` ${dupes} already on the roster will be skipped.` : ""}</p>
+      <div class="ptable"><table><thead><tr><th>First</th><th>Last</th><th>Pronouns</th><th>ID</th></tr></thead><tbody>
+      ${pendingImport.map(s => `<tr><td${s.first ? "" : ' class="miss"'}>${esc(s.first) || "missing"}</td><td${s.last ? "" : ' class="miss"'}>${esc(s.last) || "missing"}</td><td>${esc(s.pronouns)}</td><td>${esc(s.sid)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <div class="actions"><button class="btn primary small" id="impGo"${pendingImport.length - dupes ? "" : " disabled"}>Add ${pendingImport.length - dupes} student${pendingImport.length - dupes === 1 ? "" : "s"}</button><button class="btn small" id="impSwap">Swap first and last names</button><button class="btn ghost small" id="impCancel">Cancel</button></div>
+    </div>`;
+    $("#impSwap").onclick = () => { pendingImport = pendingImport.map(s => ({ ...s, first: s.last, last: s.first })); draw(); };
+    $("#impCancel").onclick = () => { pendingImport = []; box.innerHTML = ""; };
+    $("#impGo").onclick = () => {
+      const fresh = pendingImport.filter(s => !seen.has((s.first + "|" + s.last).toLowerCase())).map(s => ({ id: uid(), ...s }));
+      cls.students.push(...fresh);
+      cls.students.sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
+      pendingImport = [];
+      saveClass(); renderSetup();
+      toast(`Added ${fresh.length} student${fresh.length === 1 ? "" : "s"}. You can still edit any name below.`);
+    };
+  };
+  draw();
+  box.scrollIntoView({ block: "nearest" });
+}
+
+/* ---------- step 2: rate ---------- */
+const nameOf = s => [s.first, s.last].filter(Boolean).join(" ") || "Unnamed student";
+function totalItems(){ return cls.assignments.length + cls.milestones.length + cls.behaviors.length; }
+function doneCount(sid){
+  const m = marks[sid]; if (!m) return 0;
+  let n = 0;
+  cls.assignments.forEach(a => { const v = m.a?.[a.id]; if (v && (v.rating || (v.score !== "" && v.score != null))) n++; });
+  cls.milestones.forEach(x => { if (m.m?.[x.id]) n++; });
+  cls.behaviors.forEach(x => { if (m.b?.[x.id]) n++; });
+  return n;
+}
+function mk(sid){ return marks[sid] ||= { a: {}, m: {}, b: {}, note: "" }; }
+
+function renderRate(){
+  const m = $("#main");
+  if (!cls.students.length || !totalItems()) {
+    m.innerHTML = `<div class="empty"><p>Add ${!cls.students.length ? "a roster" : "assignments or milestones"} in Set up first.</p><button class="btn primary" id="back">Go to Set up</button></div>`;
+    $("#back").onclick = () => go("setup"); return;
+  }
+  if (!cls.students.some(s => s.id === curStudent)) curStudent = cls.students[0].id;
+  const its = rateItems();
+  if (!its.some(x => x.key === curItem)) curItem = its[0].key;
+  m.innerHTML = `
+    ${cls.example ? `<div class="banner"><p>Example class with made-up students. Click any button to try it.</p><button class="btn small" data-resume>Resume from a save code</button></div>` : ""}
+    <div class="modebar">
+      <span class="colhead">Rate</span>
+      <div class="steps" role="tablist" aria-label="Rating order">
+        <button role="tab" data-mode="student" aria-selected="${rateMode === "student"}">Student by student</button>
+        <button role="tab" data-mode="item" aria-selected="${rateMode === "item"}">Assignment by assignment</button>
+      </div>
+    </div>
+    <div class="rate">
+      <nav class="rail" id="rail" aria-label="${rateMode === "item" ? "Assignments" : "Students"}"></nav>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <div class="mobilepick"><select id="mpick" aria-label="${rateMode === "item" ? "Assignment" : "Student"}"></select></div>
+        <section class="sheet" id="sheet"></section>
+      </div>
+    </div>`;
+  m.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { rateMode = b.dataset.mode; LS.set("rateMode", rateMode); renderRate(); });
+  renderRail(); renderSheet();
+}
+
+let rateMode = LS.get("rateMode") === "item" ? "item" : "student";
+let curItem = null;
+function renderRail(){ if (!$("#rail")) return; rateMode === "item" ? renderItemRail() : renderStudentRail(); }
+function renderSheet(){ rateMode === "item" ? renderItemSheet() : renderStudentSheet(); }
+
+function renderStudentRail(){
+  const tot = totalItems();
+  $("#rail").innerHTML = cls.students.map(s => {
+    const d = doneCount(s.id), pct = tot ? Math.round(d / tot * 100) : 0;
+    return `<button data-id="${s.id}" aria-current="${s.id === curStudent}"><span class="nm">${esc(s.last ? s.last + ", " + s.first : nameOf(s))}</span><span class="ct">${d}/${tot}</span><span class="bar"><i class="${d === tot ? "done" : ""}" style="width:${pct}%"></i></span></button>`;
+  }).join("");
+  $("#rail").onclick = e => { const b = e.target.closest("button[data-id]"); if (b) { curStudent = b.dataset.id; renderRail(); renderSheet(); } };
+  $("#mpick").innerHTML = cls.students.map(s => `<option value="${s.id}"${s.id === curStudent ? " selected" : ""}>${esc(nameOf(s))} (${doneCount(s.id)}/${tot})</option>`).join("");
+  $("#mpick").onchange = e => { curStudent = e.target.value; renderRail(); renderSheet(); };
+}
+
+function chips(group, itemId, labels, current, extra = ""){
+  return labels.map(l => `<button class="chip${l === "Missing" ? " neg" : ""}" data-g="${group}" data-i="${itemId}" data-v="${esc(l)}" aria-pressed="${l === current}">${esc(l)}</button>`).join("") + extra;
+}
+
+function renderStudentSheet(){
+  const s = cls.students.find(x => x.id === curStudent), m = mk(s.id);
+  const i = cls.students.indexOf(s);
+  const asg = cls.assignments.map(a => {
+    const v = m.a[a.id] || {};
+    return `<div class="item"><div class="lbl">${esc(a.name || "Untitled assignment")}<span>${esc(a.type)}${a.max ? ` · ${esc(a.max)} pts` : ""}</span></div>
+      <div class="ctrls">
+        <label class="score">${a.max ? "" : "Grade"}<input type="text" inputmode="decimal" data-score="${a.id}" value="${esc(v.score ?? "")}" aria-label="Score for ${esc(a.name)}" placeholder="${a.max ? "score" : "—"}">${a.max ? ` / ${esc(a.max)}` : ""}</label>
+        <span class="sep" aria-hidden="true"></span>
+        ${chips("a", a.id, [...cls.scale, "Missing"], v.rating)}
+        <button class="chip flag" data-late="${a.id}" aria-pressed="${!!v.late}">Late</button>
+      </div></div>`;
+  }).join("");
+  const ms = cls.milestones.map(x => `<div class="item"><div class="lbl">${esc(x.name || "Untitled milestone")}${x.desc ? `<span>${esc(x.desc)}</span>` : ""}</div><div class="ctrls">${chips("m", x.id, cls.scale, m.m[x.id])}</div></div>`).join("");
+  const bh = cls.behaviors.map(x => `<div class="item"><div class="lbl">${esc(x.name || "Untitled behavior")}</div><div class="ctrls">${chips("b", x.id, cls.freq, m.b[x.id])}</div></div>`).join("");
+
+  $("#sheet").innerHTML = `
+    <div class="sheethead">
+      <div class="who"><h2>${esc(nameOf(s))}</h2><span>${[s.pronouns, s.sid && "ID " + s.sid, `${i + 1} of ${cls.students.length}`].filter(Boolean).map(esc).join(" · ")}</span></div>
+      <button class="btn small" id="copyOne">Copy this student's data</button>
+    </div>
+    ${asg ? `<div class="group"><h3>Assignments <small>Enter a score, click a rating, or both</small></h3>${asg}</div>` : ""}
+    ${ms ? `<div class="group"><h3>Learning milestones</h3>${ms}</div>` : ""}
+    ${bh ? `<div class="group"><h3>Classroom behaviors</h3>${bh}</div>` : ""}
+    <div class="group"><h3>Teacher note <small>Optional: a specific moment or detail only you would know</small></h3>
+      <textarea id="note" rows="2" placeholder="e.g. Led our Socratic seminar on loneliness in Of Mice and Men.">${esc(m.note)}</textarea></div>
+    <div class="navrow">
+      <button class="btn" id="prev" ${i === 0 ? "disabled" : ""}>← Previous</button>
+      <button class="btn primary" id="next">${i === cls.students.length - 1 ? "Done: go to Export" : "Next student →"}</button>
+    </div>`;
+
+  const sheet = $("#sheet");
+  sheet.onclick = e => {
+    const c = e.target.closest(".chip"); if (!c) return;
+    if (c.dataset.late) { const v = m.a[c.dataset.late] ||= {}; v.late = !v.late; c.setAttribute("aria-pressed", v.late); }
+    else {
+      const g = c.dataset.g, id = c.dataset.i, val = c.dataset.v;
+      const on = c.getAttribute("aria-pressed") !== "true";
+      if (g === "a") { const v = m.a[id] ||= {}; v.rating = on ? val : ""; }
+      else m[g][id] = on ? val : "";
+      c.parentElement.querySelectorAll(`.chip[data-g]`).forEach(x => x.setAttribute("aria-pressed", on && x === c));
+    }
+    saveMarks(); renderRail();
+  };
+  sheet.oninput = e => {
+    if (e.target.dataset.score) { const v = m.a[e.target.dataset.score] ||= {}; v.score = e.target.value.trim(); saveMarks(); renderRailSoon(); }
+    if (e.target.id === "note") { m.note = e.target.value; saveMarks(); }
+  };
+  $("#prev").onclick = () => { curStudent = cls.students[i - 1].id; renderRail(); renderSheet(); window.scrollTo({ top: 0 }); };
+  $("#next").onclick = () => { if (i === cls.students.length - 1) go("export"); else { curStudent = cls.students[i + 1].id; renderRail(); renderSheet(); window.scrollTo({ top: 0 }); } };
+  $("#copyOne").onclick = () => copyText(summary(s), "Copied " + nameOf(s) + "'s data");
+}
+
+/* ---------- rating one assignment (or milestone, behavior) across the class ---------- */
+function rateItems(){
+  return [
+    ...cls.assignments.map(a => ({ key: "a:" + a.id, g: "a", id: a.id, group: "Assignments", name: a.name || "Untitled assignment", sub: a.type + (a.max ? ` · ${a.max} pts` : ""), labels: [...cls.scale, "Missing"], max: a.max })),
+    ...cls.milestones.map(x => ({ key: "m:" + x.id, g: "m", id: x.id, group: "Learning milestones", name: x.name || "Untitled milestone", sub: x.desc || "", labels: cls.scale })),
+    ...cls.behaviors.map(x => ({ key: "b:" + x.id, g: "b", id: x.id, group: "Classroom behaviors", name: x.name || "Untitled behavior", sub: "", labels: cls.freq })),
+    { key: "n:note", g: "n", id: "note", group: "Notes", name: "Teacher notes", sub: "A specific moment or detail for each student", labels: [] }
+  ];
+}
+function itemVal(it, sid){
+  const m = marks[sid]; if (!m) return null;
+  if (it.g === "a") { const v = m.a?.[it.id]; return v && (v.rating || (v.score !== "" && v.score != null)) ? v : null; }
+  if (it.g === "n") return m.note?.trim() || null;
+  return m[it.g]?.[it.id] || null;
+}
+const itemDone = it => cls.students.filter(s => itemVal(it, s.id)).length;
+
+function renderItemRail(){
+  const its = rateItems(), N = cls.students.length;
+  let lastGroup = "";
+  $("#rail").innerHTML = its.map(it => {
+    const d = itemDone(it), pct = Math.round(d / N * 100);
+    const head = it.group !== lastGroup ? `<div class="railhead">${esc(it.group)}</div>` : ""; lastGroup = it.group;
+    return head + `<button data-key="${esc(it.key)}" aria-current="${it.key === curItem}"><span class="nm">${esc(it.name)}</span><span class="ct">${d}/${N}</span><span class="bar"><i class="${d === N ? "done" : ""}" style="width:${pct}%"></i></span></button>`;
+  }).join("");
+  $("#rail").onclick = e => { const b = e.target.closest("button[data-key]"); if (b) { curItem = b.dataset.key; renderRail(); renderSheet(); } };
+  $("#mpick").innerHTML = its.map(it => `<option value="${esc(it.key)}"${it.key === curItem ? " selected" : ""}>${esc(it.name)} (${itemDone(it)}/${N})</option>`).join("");
+  $("#mpick").onchange = e => { curItem = e.target.value; renderRail(); renderSheet(); };
+}
+
+let undoFill = null;
+function renderItemSheet(){
+  const its = rateItems(), i = its.findIndex(x => x.key === curItem), it = its[i];
+  const rows = cls.students.map(s => {
+    const m = mk(s.id);
+    let ctrls;
+    if (it.g === "n") ctrls = `<textarea rows="1" data-note="${s.id}" aria-label="Note for ${esc(nameOf(s))}">${esc(m.note)}</textarea>`;
+    else {
+      const v = it.g === "a" ? (m.a[it.id] || {}) : { rating: m[it.g][it.id] };
+      ctrls = (it.g === "a" ? `<label class="score"><input type="text" inputmode="decimal" data-score="${s.id}" value="${esc(v.score ?? "")}" aria-label="Score for ${esc(nameOf(s))}" placeholder="${it.max ? "score" : "—"}">${it.max ? ` / ${esc(it.max)}` : ""}</label><span class="sep" aria-hidden="true"></span>` : "")
+        + it.labels.map(l => `<button class="chip${l === "Missing" ? " neg" : ""}" tabindex="-1" data-v="${esc(l)}" aria-pressed="${l === v.rating}">${esc(l)}</button>`).join("")
+        + (it.g === "a" ? `<button class="chip flag" tabindex="-1" data-late aria-pressed="${!!v.late}">Late</button>` : "");
+    }
+    return `<div class="item stu" data-sid="${s.id}"><div class="lbl">${esc(s.last ? s.last + ", " + s.first : nameOf(s))}</div><div class="ctrls">${ctrls}</div></div>`;
+  }).join("");
+  const fill = it.g === "n" ? "" : `<div class="fillbar">
+      <span>Fill in students without a rating:</span> ${it.labels.map(l => `<button class="chip" data-fill="${esc(l)}" data-how="blank">${esc(l)}</button>`).join("")}
+    </div>
+    <div class="fillbar">
+      <span>Change every student to:</span> ${it.labels.map(l => `<button class="chip" data-fill="${esc(l)}" data-how="all">${esc(l)}</button>`).join("")}
+      <button class="btn small" data-fill="" data-how="all">Clear all ratings</button>
+      ${undoFill && undoFill.key === it.key ? `<button class="btn small primary" id="undoFill">Undo: ${esc(undoFill.label)}</button>` : ""}
+    </div>`;
+  $("#sheet").innerHTML = `
+    <div class="sheethead">
+      <div class="who"><h2>${esc(it.name)}</h2><span>${[it.sub, `${it.group} · ${i + 1} of ${its.length}`, `${itemDone(it)} of ${cls.students.length} students done`].filter(Boolean).map(esc).join(" · ")}</span></div>
+    </div>
+    ${it.g === "a" ? `<p class="hint" style="margin:0">Type a score and press Enter to jump to the next student.</p>` : ""}
+    ${fill}
+    <div class="group">${rows}</div>
+    <div class="navrow">
+      <button class="btn" id="prev" ${i === 0 ? "disabled" : ""}>← Previous</button>
+      <button class="btn primary" id="next">${i === its.length - 1 ? "Done: go to Export" : "Next: " + esc(its[i + 1].name) + " →"}</button>
+    </div>`;
+
+  const sheet = $("#sheet");
+  const getRating = sid => { const m = marks[sid]; if (!m) return ""; return (it.g === "a" ? m.a?.[it.id]?.rating : m[it.g]?.[it.id]) || ""; };
+  const setRating = (sid, val) => {
+    const m = mk(sid);
+    if (it.g === "a") { const v = m.a[it.id] ||= {}; v.rating = val; } else m[it.g][it.id] = val;
+  };
+  sheet.onclick = e => {
+    if (e.target.closest("#undoFill")) {
+      undoFill.before.forEach((r, sid) => setRating(sid, r));
+      undoFill = null; saveMarks(); renderRail(); renderSheet(); toast("Undone"); return;
+    }
+    const f = e.target.closest("[data-fill]");
+    if (f) {
+      const val = f.dataset.fill, all = f.dataset.how === "all";
+      const before = new Map(cls.students.map(s => [s.id, getRating(s.id)]));
+      let n = 0;
+      cls.students.forEach(s => { const cur = getRating(s.id); if ((all || !cur) && cur !== val) { setRating(s.id, val); n++; } });
+      if (!n) { toast(all ? "Nothing to change" : "Every student already has a rating"); return; }
+      undoFill = { key: it.key, before, label: val ? `${all ? "changed" : "filled"} ${n} to ${val}` : `cleared ${n}` };
+      saveMarks(); renderRail(); renderSheet();
+      toast(val ? `Set ${val} for ${n} student${n === 1 ? "" : "s"}` : `Cleared ratings for ${n} student${n === 1 ? "" : "s"}`); return;
+    }
+    const c = e.target.closest(".chip"); const row = e.target.closest("[data-sid]"); if (!c || !row) return;
+    const sid = row.dataset.sid, m = mk(sid);
+    if (c.hasAttribute("data-late")) { const v = m.a[it.id] ||= {}; v.late = !v.late; c.setAttribute("aria-pressed", v.late); }
+    else {
+      const on = c.getAttribute("aria-pressed") !== "true";
+      setRating(sid, on ? c.dataset.v : "");
+      row.querySelectorAll(".chip[data-v]").forEach(x => x.setAttribute("aria-pressed", on && x === c));
+    }
+    saveMarks(); renderRailSoon();
+  };
+  sheet.oninput = e => {
+    if (e.target.dataset.score) { const v = mk(e.target.dataset.score).a[it.id] ||= {}; v.score = e.target.value.trim(); saveMarks(); renderRailSoon(); }
+    if (e.target.dataset.note) { mk(e.target.dataset.note).note = e.target.value; saveMarks(); renderRailSoon(); }
+  };
+  sheet.onkeydown = e => {
+    if (e.key !== "Enter" || !e.target.dataset.score) return;
+    e.preventDefault();
+    const all = [...sheet.querySelectorAll("[data-score]")], k = all.indexOf(e.target);
+    (all[k + 1] || $("#next")).focus();
+  };
+  const move = d => { undoFill = null; curItem = its[i + d].key; renderRail(); renderSheet(); window.scrollTo({ top: 0 }); };
+  $("#prev").onclick = () => move(-1);
+  $("#next").onclick = () => i === its.length - 1 ? go("export") : move(1);
+}
+
+let railT; function renderRailSoon(){ clearTimeout(railT); railT = setTimeout(renderRail, 300); }
+
+/* ---------- summaries ---------- */
+const num = v => { const n = parseFloat(String(v ?? "").replace("%", "")); return isFinite(n) ? n : null; };
+const plural = (t) => ({ Essay: "Essays", Quiz: "Quizzes", Homework: "Homework", Test: "Tests", Project: "Projects", Presentation: "Presentations", Other: "Other work" })[t] || t;
+
+function summary(s, opts = exportOpts){
+  const m = marks[s.id] || { a: {}, m: {}, b: {} };
+  const L = [];
+  L.push(`Student: ${nameOf(s)}${s.pronouns ? ` (${s.pronouns})` : ""}`);
+  L.push(`Class: ${cls.name}${cls.period ? ` · ${cls.period}` : ""}`);
+  const asg = [], byType = {}, completion = {};
+  cls.assignments.forEach(a => {
+    const v = m.a?.[a.id] || {};
+    const sc = num(v.score), max = num(a.max);
+    const t = a.type;
+    if (v.rating || sc != null) { completion[t] ||= { done: 0, missing: 0 }; if (v.rating === "Missing") completion[t].missing++; else completion[t].done++; }
+    if (!v.rating && sc == null && !v.late) return;
+    const bits = [];
+    if (opts.scores && sc != null) bits.push(max ? `${sc}/${max}` : String(v.score));
+    if (v.rating) bits.push(v.rating);
+    if (v.late) bits.push("late");
+    asg.push(`- ${a.name || "Untitled"} (${t.toLowerCase()}): ${bits.join(", ") || "no rating"}`);
+    if (sc != null && max && v.rating !== "Missing") { (byType[t] ||= []).push(sc / max * 100); }
+  });
+  if (asg.length) { L.push("Assignments:"); L.push(...asg); }
+  const stats = [];
+  if (opts.scores) Object.entries(byType).forEach(([t, arr]) => stats.push(`${plural(t)} average ${Math.round(arr.reduce((x, y) => x + y, 0) / arr.length)}% (${arr.length})`));
+  Object.entries(completion).forEach(([t, c]) => { if (c.missing) stats.push(`${plural(t)}: ${c.done} of ${c.done + c.missing} turned in, ${c.missing} missing`); else if (t === "Homework") stats.push(`Homework: ${c.done} of ${c.done} turned in`); });
+  const late = cls.assignments.filter(a => m.a?.[a.id]?.late).length;
+  if (late) stats.push(`${late} assignment${late > 1 ? "s" : ""} late`);
+  if (stats.length) L.push("Overall: " + stats.join("; "));
+  const ms = cls.milestones.filter(x => m.m?.[x.id]).map(x => `- ${x.name}${x.desc ? ` (${x.desc})` : ""}: ${m.m[x.id]}`);
+  if (ms.length) { L.push(`Learning milestones (scale: ${cls.scale.join(", ")}):`); L.push(...ms); }
+  const bh = cls.behaviors.filter(x => m.b?.[x.id]).map(x => `- ${x.name}: ${m.b[x.id]}`);
+  if (bh.length) { L.push("Classroom behaviors:"); L.push(...bh); }
+  if (m.note?.trim()) L.push(`Teacher note: ${m.note.trim()}`);
+  return L.join("\n");
+}
+
+function csv(){
+  const q = v => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const head = ["Last name","First name","Pronouns","Student ID"];
+  cls.assignments.forEach(a => head.push(`${a.name} score`, `${a.name} rating`));
+  cls.milestones.forEach(x => head.push(x.name));
+  cls.behaviors.forEach(x => head.push(x.name));
+  head.push("Teacher note", "Summary for comment");
+  const rows = cls.students.map(s => {
+    const m = marks[s.id] || { a: {}, m: {}, b: {} };
+    const r = [s.last, s.first, s.pronouns, s.sid];
+    cls.assignments.forEach(a => { const v = m.a?.[a.id] || {}; r.push(v.score ?? "", [v.rating, v.late ? "Late" : ""].filter(Boolean).join(", ")); });
+    cls.milestones.forEach(x => r.push(m.m?.[x.id] || ""));
+    cls.behaviors.forEach(x => r.push(m.b?.[x.id] || ""));
+    r.push(m.note || "", summary(s, { ...exportOpts, prompt: false }));
+    return r;
+  });
+  return "﻿" + [head, ...rows].map(r => r.map(q).join(",")).join("\r\n");
+}
+
+async function copyText(text, msg){
+  try { await navigator.clipboard.writeText(text); toast(msg || "Copied"); }
+  catch(e) {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.append(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch(_){}
+    ta.remove(); toast(ok ? (msg || "Copied") : "Copy was blocked. Select the text and copy it yourself.");
+  }
+}
+
+/* ---------- step 3: export ---------- */
+function renderExport(){
+  const m = $("#main");
+  if (!cls.students.length) { m.innerHTML = `<div class="empty"><p>Add a roster in Set up first.</p></div>`; return; }
+  const tot = totalItems();
+  const rated = cls.students.filter(s => doneCount(s.id) > 0).length;
+  m.innerHTML = `
+  <div class="export">
+    <section class="panel">
+      <h2>Export</h2>
+      <p class="hint">${rated} of ${cls.students.length} students have ratings. Students with no ratings still appear so the roster stays complete.</p>
+      <label class="check"><input type="checkbox" id="o-scores"${exportOpts.scores ? " checked" : ""}> Include scores and averages</label>
+      <label class="check"><input type="checkbox" id="o-prompt"${exportOpts.prompt ? " checked" : ""}> Start "Copy all" with instructions for the AI</label>
+      <textarea id="o-text" rows="7" aria-label="Instructions for the AI"${exportOpts.prompt ? "" : " hidden"}>${esc(exportOpts.promptText)}</textarea>
+      <div class="actions">
+        <button class="btn primary" id="copyAll">Copy all for an AI chat</button>
+        <button class="btn" id="dl">Download CSV</button>
+      </div>
+      <p class="hint">Paste "Copy all" into Claude or another AI chat to draft the comments. The CSV has one row per student with every rating, the note, and the same summary text.</p>
+      <div class="finished">
+        <h3>Finished with this class?</h3>
+        <p class="hint">Start your next class or grading period with the same assignments, milestones and behaviors.</p>
+        <div class="actions"><button class="btn" data-copyclass>Copy to a new class</button></div>
+        <div class="copyslot" hidden></div>
+      </div>
+      <div id="csvFallback" hidden><p class="hint">Downloads aren't available here. Copy this CSV text into a spreadsheet instead.</p><textarea rows="6" readonly id="csvText"></textarea><button class="btn small" id="copyCsv">Copy CSV text</button></div>
+    </section>
+    <div class="cards" id="cards"></div>
+  </div>`;
+  const drawCards = () => {
+    $("#cards").innerHTML = cls.students.map(s => `<article class="card"><header><h3>${esc(nameOf(s))}</h3><span class="ct" style="color:var(--muted);font-size:.8rem">${doneCount(s.id)}/${tot} rated</span><button class="btn small" data-copy="${s.id}">Copy</button></header><pre>${esc(summary(s))}</pre></article>`).join("");
+  };
+  drawCards();
+  $("#cards").onclick = e => { const b = e.target.closest("[data-copy]"); if (b) { const s = cls.students.find(x => x.id === b.dataset.copy); copyText((exportOpts.prompt ? exportOpts.promptText + "\n\n" : "") + summary(s), "Copied " + nameOf(s)); } };
+  $("#o-scores").onchange = e => { exportOpts.scores = e.target.checked; drawCards(); };
+  $("#o-prompt").onchange = e => { exportOpts.prompt = e.target.checked; $("#o-text").hidden = !e.target.checked; };
+  $("#o-text").oninput = e => { exportOpts.promptText = e.target.value; };
+  $("#copyAll").onclick = () => {
+    const body = cls.students.map(s => summary(s)).join("\n\n---\n\n");
+    copyText((exportOpts.prompt ? exportOpts.promptText + "\n\n===\n\n" : "") + body, `Copied ${cls.students.length} students`);
+  };
+  $("#dl").onclick = async () => {
+    const data = csv();
+    const fname = (cls.name + (cls.period ? " " + cls.period : "")).replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") + "-comment-data.csv";
+    const r = await saveFile(fname, data);
+    if (r === "saved") { toast("CSV saved"); return; }
+    if (r !== "unavailable") return;
+    $("#csvFallback").hidden = false; $("#csvText").value = data;
+    $("#copyCsv").onclick = () => copyText(data, "CSV copied");
+  };
+}
+
+/* ---------- save codes ---------- */
+async function saveFile(filename, data){
+  // Outside claude.ai (e.g. GitHub Pages), save with a normal browser download.
+  if (!window.claude?.use) {
+    try {
+      const type = filename.endsWith(".json") ? "application/json" : "text/csv";
+      const url = URL.createObjectURL(new Blob([data], { type: type + ";charset=utf-8" }));
+      const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      return "saved";
+    } catch(e) { return "unavailable"; }
+  }
+  let dl = null; try { dl = await window.claude.use("downloads"); } catch(e){}
+  if (!dl) return "unavailable";
+  try { await dl.save({ filename, data }); return "saved"; }
+  catch(e) {
+    if (e?.code === "declined") return "declined";
+    if (e?.code === "rate_limited") { toast("A save prompt is already open"); return "declined"; }
+    return "unavailable";
+  }
+}
+let saveOpts = { scope: "current", setupOnly: false };
+async function buildCode(){
+  const ids = saveOpts.scope === "all" ? index.classes.map(c => c.id) : [cls.id];
+  const classes = [];
+  for (const id of ids) {
+    let c = id === cls.id ? cls : await store.get("class_" + id); if (!c) continue;
+    let m = id === cls.id ? marks : (await store.get("marks_" + id)) || {};
+    c = JSON.parse(JSON.stringify(c));
+    if (saveOpts.setupOnly) { c.students = []; m = {}; delete c.example; }
+    classes.push({ ...c, marks: m });
+  }
+  return JSON.stringify({ app: "comment-data-builder", version: 1, savedAt: new Date().toISOString(), setupOnly: saveOpts.setupOnly, classes });
+}
+const fmtTime = iso => { try { return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch(e){ return ""; } };
+
+function renderSave(){
+  const last = LS.get("lastBackup");
+  $("#main").innerHTML = `
+  <div class="setup">
+    <section class="panel">
+      <header><h2>Save your progress</h2><span class="hint">${last ? "Last saved " + esc(fmtTime(last)) : "Not saved yet"}</span></header>
+      <p class="hint">Your work autosaves in this browser, but clearing browser data or switching computers loses it. A save code holds everything, so you can paste it back in anywhere to resume. Keep it somewhere private, like a document in your school drive: it contains student names and ratings.</p>
+      <div class="actions" role="radiogroup" aria-label="What to save">
+        <label class="check"><input type="radio" name="scope" value="current"${saveOpts.scope === "current" ? " checked" : ""}> This class (${esc(cls.name)})</label>
+        ${index.classes.length > 1 ? `<label class="check"><input type="radio" name="scope" value="all"${saveOpts.scope === "all" ? " checked" : ""}> All ${index.classes.length} classes</label>` : ""}
+      </div>
+      <label class="check"><input type="checkbox" id="setupOnly"${saveOpts.setupOnly ? " checked" : ""}> Setup only: assignments, milestones and behaviors, with no students or ratings. Use this to share your setup with a colleague or reuse it next grading period.</label>
+      <div class="actions">
+        <button class="btn primary" id="copyCode">Copy save code</button>
+        <button class="btn" id="dlCode">Download save file</button>
+      </div>
+      <textarea id="codeOut" class="codebox" rows="4" readonly aria-label="Save code"></textarea>
+    </section>
+    <section class="panel">
+      <header><h2>Resume from a save code</h2></header>
+      <p class="hint">Paste a save code or upload a save file. Classes in it are added to this browser. If a class is already here, you'll be asked before it's replaced.</p>
+      <textarea id="codeIn" class="codebox" rows="6" placeholder='Paste your save code here. It starts with {"app":"comment-data-builder"'></textarea>
+      <div class="actions">
+        <button class="btn primary" id="resume">Resume</button>
+        <label class="btn" for="codeFile" style="cursor:pointer">Upload save file</label>
+        <input type="file" id="codeFile" accept=".json,application/json,text/plain" hidden>
+      </div>
+      <div id="resumeMsg"></div>
+    </section>
+  </div>`;
+  const refresh = async () => { $("#codeOut").value = await buildCode(); };
+  refresh();
+  document.querySelectorAll('input[name="scope"]').forEach(r => r.onchange = e => { saveOpts.scope = e.target.value; refresh(); });
+  $("#setupOnly").onchange = e => { saveOpts.setupOnly = e.target.checked; refresh(); };
+  const done = () => { if (!saveOpts.setupOnly && (saveOpts.scope === "all" || index.classes.length === 1)) markBackedUp(); else if (!saveOpts.setupOnly) LS.set("lastBackup", new Date().toISOString()); };
+  $("#copyCode").onclick = async () => {
+    const code = await buildCode(); $("#codeOut").value = code;
+    try { await navigator.clipboard.writeText(code); toast("Save code copied. Paste it somewhere safe."); done(); }
+    catch(e) { $("#codeOut").focus(); $("#codeOut").select(); let ok = false; try { ok = document.execCommand("copy"); } catch(_){} toast(ok ? "Save code copied. Paste it somewhere safe." : "Copy was blocked. The code is selected; copy it yourself."); if (ok) done(); }
+  };
+  $("#dlCode").onclick = async () => {
+    const code = await buildCode();
+    const name = (saveOpts.scope === "all" ? "all-classes" : cls.name).replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") + (saveOpts.setupOnly ? "-setup" : "-progress") + "-" + new Date().toISOString().slice(0, 10) + ".json";
+    const r = await saveFile(name, code);
+    if (r === "saved") { toast("Save file downloaded"); done(); }
+    else if (r === "unavailable") toast("Downloads aren't available here. Use Copy save code instead.");
+  };
+  $("#resume").onclick = () => importCode($("#codeIn").value);
+  $("#codeFile").onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { $("#codeIn").value = String(r.result); importCode(String(r.result)); }; r.readAsText(f); };
+}
+
+function resumeMsg(html, kind){ const el = $("#resumeMsg"); if (el) el.innerHTML = `<p class="msg ${kind || ""}">${html}</p>`; }
+
+function importCode(text, confirmed){
+  let data;
+  try { data = JSON.parse(String(text).trim()); }
+  catch(e) { return resumeMsg("That code is incomplete or changed. Copy the whole code, from the first { to the last }, and try again.", "err"); }
+  if (data?.app !== "comment-data-builder" || !Array.isArray(data.classes) || !data.classes.length)
+    return resumeMsg("This isn't a Grade Narrative Helper save code.", "err");
+  const incoming = data.classes.filter(c => c && typeof c === "object").map(c => {
+    const { marks: m, ...setup } = c;
+    const out = { ...newClassObj(setup.name || "Imported class"), ...setup };
+    for (const k of ["assignments","milestones","behaviors","students"]) if (!Array.isArray(out[k])) out[k] = [];
+    if (data.setupOnly) {
+      out.id = uid(); out.students = []; out.name = out.name.replace(/ \(example\)$/, "");
+      if (index.classes.some(c => c.name === out.name)) out.name += " (copy)";
+      return { c: out, m: {} };
+    }
+    if (!out.id) out.id = uid();
+    return { c: out, m: (m && typeof m === "object") ? m : {} };
+  });
+  const clashes = incoming.filter(x => index.classes.some(c => c.id === x.c.id));
+  if (clashes.length && !confirmed) {
+    resumeMsg(`This replaces your current copy of ${clashes.map(x => "<strong>" + esc(x.c.name) + "</strong>").join(", ")} in this browser with the version saved ${esc(fmtTime(data.savedAt)) || "in the code"}. <button class="btn small" id="doReplace">Replace</button> <button class="btn small" id="noReplace">Cancel</button>`, "err");
+    $("#doReplace").onclick = () => importCode(text, true);
+    $("#noReplace").onclick = () => resumeMsg("Nothing changed.");
+    return;
+  }
+  for (const { c, m } of incoming) {
+    const e = index.classes.find(x => x.id === c.id);
+    if (e) e.name = c.name; else index.classes.push({ id: c.id, name: c.name });
+    store.put("class_" + c.id, c); store.put("marks_" + c.id, m);
+  }
+  // Drop the untouched example class once real work arrives.
+  const ex = data.setupOnly ? [] : index.classes.filter(c => c.id !== incoming[0].c.id && c.name.endsWith("(example)"));
+  for (const c of ex) { index.classes = index.classes.filter(x => x.id !== c.id); store.del("class_" + c.id); store.del("marks_" + c.id); }
+  saveIndex();
+  if (!data.setupOnly) markBackedUp();
+  view = data.setupOnly ? "setup" : "rate";
+  openClass(incoming[0].c.id);
+  toast(data.setupOnly ? `Setup loaded. Add a roster to start.` : `Resumed ${incoming.length} class${incoming.length === 1 ? "" : "es"}`);
+}
+
+/* ---------- first-use warning ---------- */
+function showWelcome(){
+  if (LS.get("welcomed")) return;
+  const w = $("#welcome"); w.hidden = false; $("#welcomeOk").focus();
+  $("#welcomeOk").onclick = () => { w.hidden = true; LS.set("welcomed", true); };
+}
+
+/* ---------- copy a class to a new class ---------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-copyclass]"); if (!b) return;
+  const slot = b.closest(".panel, .finished").querySelector(".copyslot");
+  if (!slot.hidden) { slot.hidden = true; return; }
+  slot.hidden = false; drawCopyForm(slot);
+});
+function drawCopyForm(slot){
+  const n = (k) => cls[k].length;
+  slot.innerHTML = `<div class="copyform">
+    <div class="two">
+      <label class="field">New class name<input type="text" id="cp-name" value="${esc(cls.name.replace(/ \(example\)$/, ""))} (copy)"></label>
+      <label class="field">Grading period<input type="text" id="cp-period" value="${esc(cls.period)}" placeholder="Quarter 2"></label>
+    </div>
+    <label class="check"><input type="checkbox" id="cp-asg" checked> Assignments (${n("assignments")})</label>
+    <label class="check"><input type="checkbox" id="cp-ms" checked> Learning milestones (${n("milestones")})</label>
+    <label class="check"><input type="checkbox" id="cp-bh" checked> Classroom behaviors (${n("behaviors")})</label>
+    <label class="check"><input type="checkbox" id="cp-stu"> Roster (${n("students")} students). Keep this for the same students next grading period.</label>
+    <p class="hint">Rating buttons come along too. Scores, ratings and notes are never copied, so the new class starts blank.</p>
+    <div class="actions"><button class="btn primary" id="cp-go">Create new class</button></div>
+  </div>`;
+  $("#cp-go", slot).onclick = () => {
+    const c = newClassObj($("#cp-name", slot).value.trim() || "New class");
+    c.period = $("#cp-period", slot).value.trim();
+    c.scale = [...cls.scale]; c.freq = [...cls.freq];
+    const dup = arr => arr.map(x => ({ ...x, id: uid() }));
+    if ($("#cp-asg", slot).checked) c.assignments = dup(cls.assignments);
+    if ($("#cp-ms", slot).checked) c.milestones = dup(cls.milestones);
+    if ($("#cp-bh", slot).checked) c.behaviors = dup(cls.behaviors);
+    if ($("#cp-stu", slot).checked) c.students = dup(cls.students);
+    index.classes.push({ id: c.id, name: c.name });
+    store.put("class_" + c.id, c); store.put("marks_" + c.id, {});
+    view = "setup"; openClass(c.id);
+    toast(`Created ${c.name}`);
+  };
+}
+
+boot().then(showWelcome);
+renderSaveBtn();
+})();
+</script>
+
+</body>
+</html>
