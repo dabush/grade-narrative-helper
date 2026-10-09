@@ -115,6 +115,14 @@ textarea{width:100%;resize:vertical}
 .bar i{display:block;height:100%;background:var(--accent)}
 .bar i.done{background:var(--ok)}
 .mobilepick{display:none}
+.subjects{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.kit{background:var(--accent-soft);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.tour-ring{position:fixed;border-radius:10px;box-shadow:0 0 0 3px var(--accent),0 0 0 9999px rgb(20 15 35/.45);pointer-events:none;z-index:40;transition:all .2s}
+.tour-pop{position:fixed;z-index:41;background:var(--surface);color:var(--ink);border-radius:12px;box-shadow:0 12px 40px rgb(0 0 0/.3);padding:16px;width:min(340px,calc(100vw - 32px));display:flex;flex-direction:column;gap:10px}
+.tour-pop p{margin:0}
+.tour-pop .tour-foot{display:flex;align-items:center;gap:6px;justify-content:space-between;flex-wrap:wrap}
+.tour-pop .ct{color:var(--muted);font-size:.8rem}
+@media (prefers-reduced-motion:reduce){.tour-ring{transition:none}}
 .modebar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:14px}
 .modebar .steps button{font-size:.85rem;padding:5px 12px}
 .railhead{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:10px 9px 2px}
@@ -170,6 +178,7 @@ textarea{width:100%;resize:vertical}
       <select id="classSel"></select>
       <button class="btn small" id="newClass">New class</button>
       <button class="btn small savebtn" id="saveBtn">Save progress</button>
+      <button class="btn small" id="helpBtn" title="Take the guided tour">Tour</button>
     </div>
     <nav class="steps" role="tablist" aria-label="Steps">
       <button role="tab" id="tab-setup" data-view="setup">1 · Set up</button>
@@ -186,7 +195,7 @@ textarea{width:100%;resize:vertical}
     <p>This tool doesn't store your data online. There's no account and no server, so nobody else can see your students' information, and nobody can recover it for you either.</p>
     <p><strong>Before you close this tab, click Save progress</strong> and download a save file or copy your save code. Next time, open Save progress and load that file or code to pick up where you left off.</p>
     <p class="hint">This browser keeps a temporary copy as you work, but clearing browser data or switching computers erases it. Don't rely on it.</p>
-    <div class="actions" style="justify-content:flex-end"><button class="btn primary" id="welcomeOk">I understand</button></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" id="welcomeSkip">Got it, skip the tour</button><button class="btn primary" id="welcomeOk">Got it, show me around</button></div>
   </div>
 </div>
 
@@ -195,6 +204,50 @@ textarea{width:100%;resize:vertical}
 const RATING_DEFAULT = ["Excellent","Proficient","Developing","Needs support"];
 const FREQ_DEFAULT = ["Consistently","Usually","Sometimes","Rarely"];
 const TYPES = ["Essay","Quiz","Homework","Test","Project","Presentation","Other"];
+const BASE_BEHAVIORS = ["Stays on task", "Does not create distractions for others", "Positive attitude and ready to learn", "Completes work on time", "Completes work thoroughly", "Participates in class discussion", "Comes prepared with materials", "Works well with peers", "Uses feedback to improve", "Respectful to classmates and teacher"];
+const SCI_BH = ["Follows lab safety rules", "Works effectively with lab partners"];
+// Starter kits per subject: assignment categories, learning milestones [name, what it looks like], extra behaviors.
+const SUBJECTS = [
+  { key: "english", label: "English", types: ["Essay","Quiz","Test","Homework","Project","Presentation","Discussion","Other"],
+    ms: [["Close reading","Notices word choice, imagery and tone and explains their effect"],["Thesis writing","States a clear, arguable claim"],["Using textual evidence","Selects and integrates relevant quotations"],["Analysis","Explains how evidence supports the claim"],["Organization","Logical paragraphs and transitions"],["Conventions","Grammar, punctuation and MLA format"],["Discussion","Builds on others' ideas with evidence"]],
+    bh: ["Completes assigned reading"] },
+  { key: "math", label: "Math", types: ["Test","Quiz","Homework","Problem set","Project","Other"],
+    ms: [["Problem solving","Makes sense of problems and perseveres"],["Procedural fluency","Carries out methods accurately and efficiently"],["Conceptual understanding","Explains why methods work"],["Mathematical reasoning","Justifies steps and critiques others' reasoning"],["Precision","Uses correct notation, units and labels"],["Modeling","Applies math to real situations"],["Communicating solutions","Shows work clearly and completely"]],
+    bh: ["Shows work", "Checks answers and corrects errors"] },
+  { key: "biology", label: "Biology", types: ["Lab report","Test","Quiz","Homework","Project","Presentation","Other"],
+    ms: [["Scientific inquiry","Asks testable questions and plans investigations"],["Data analysis","Organizes, graphs and interprets data"],["Scientific explanation","Uses claim, evidence and reasoning"],["Content knowledge","Understands cells, genetics, evolution and ecology"],["Lab safety and technique","Uses equipment and specimens safely and correctly"],["Scientific vocabulary","Uses biological terms accurately"],["Real-world connections","Applies biology to health, environment and society"]],
+    bh: SCI_BH },
+  { key: "chemistry", label: "Chemistry", types: ["Lab report","Test","Quiz","Homework","Problem set","Project","Other"],
+    ms: [["Lab safety and technique","Handles chemicals and equipment safely and precisely"],["Experimental design","Plans procedures and controls variables"],["Data analysis","Records, graphs and interprets measurements"],["Quantitative reasoning","Stoichiometry, unit conversions and significant figures"],["Chemical concepts","Atomic structure, bonding and reactions"],["Scientific explanation","Uses claim, evidence and reasoning"],["Scientific writing","Writes clear, complete lab reports"]],
+    bh: SCI_BH },
+  { key: "physics", label: "Physics", types: ["Lab report","Test","Quiz","Problem set","Homework","Project","Other"],
+    ms: [["Problem solving","Chooses and applies the right physics model"],["Mathematical reasoning","Algebra, units and vectors"],["Conceptual understanding","Explains phenomena without equations"],["Experimental design","Plans measurements and controls variables"],["Data analysis","Graphs data and finds relationships"],["Scientific explanation","Uses claim, evidence and reasoning"],["Measurement and uncertainty","Measures carefully and reports uncertainty"]],
+    bh: SCI_BH },
+  { key: "history", label: "History & Social Studies", types: ["Essay","DBQ","Test","Quiz","Homework","Project","Presentation","Discussion","Other"],
+    ms: [["Sourcing evidence","Evaluates the origin, purpose and reliability of sources"],["Historical thinking","Explains cause and effect and change over time"],["Contextualization","Places events in their wider setting"],["Argument writing","Builds a claim supported by evidence"],["Content knowledge","Knows key people, events and ideas"],["Research skills","Finds and cites credible sources"],["Civic discussion","Discusses issues respectfully using evidence"]],
+    bh: [] },
+  { key: "language", label: "World Language", types: ["Speaking assessment","Writing assignment","Listening assessment","Test","Quiz","Homework","Project","Other"],
+    ms: [["Interpersonal speaking","Holds spontaneous conversations"],["Presentational speaking","Presents prepared material clearly"],["Listening comprehension","Understands spoken language"],["Reading comprehension","Understands written texts"],["Writing","Writes accurately for different purposes"],["Vocabulary","Uses a growing range of words"],["Grammar","Applies grammar structures accurately"],["Cultural understanding","Understands practices and perspectives of the culture"]],
+    bh: ["Uses the target language in class", "Takes risks when speaking"] },
+  { key: "art", label: "Visual Art", types: ["Studio project","Sketchbook","Critique","Portfolio","Quiz","Other"],
+    ms: [["Technique and craft","Controls materials and tools with skill"],["Creativity","Develops original ideas"],["Composition","Uses elements and principles of design"],["Revision","Refines work using feedback"],["Art history and context","Connects work to artists and movements"],["Critique and reflection","Discusses own and others' work thoughtfully"]],
+    bh: ["Cares for materials and studio space"] },
+  { key: "music", label: "Music", types: ["Performance","Playing test","Rehearsal","Written assignment","Quiz","Other"],
+    ms: [["Technique","Posture, tone production and instrument or vocal skill"],["Rhythm","Steady tempo and accurate rhythms"],["Pitch and intonation","Plays or sings in tune"],["Music reading","Reads notation fluently"],["Ensemble skills","Listens, blends and follows the conductor"],["Musical expression","Uses dynamics, phrasing and style"]],
+    bh: ["Practices outside of class", "Cares for instruments and equipment"] },
+  { key: "pe", label: "PE & Health", types: ["Skills assessment","Fitness assessment","Participation","Written test","Project","Other"],
+    ms: [["Motor skills","Performs movement skills with good technique"],["Fitness","Builds strength, endurance and flexibility"],["Game strategy","Applies tactics and rules"],["Sportsmanship","Plays fairly and supports teammates"],["Health knowledge","Understands nutrition, wellness and safety"],["Goal setting","Sets and tracks personal fitness goals"]],
+    bh: ["Dresses out and is ready to participate"] },
+  { key: "cs", label: "Computer Science", types: ["Programming project","Lab","Quiz","Test","Homework","Presentation","Other"],
+    ms: [["Algorithmic thinking","Plans step-by-step solutions"],["Code correctness","Programs work and handle edge cases"],["Code readability","Clear names, structure and comments"],["Debugging","Finds and fixes errors systematically"],["Problem decomposition","Breaks problems into smaller parts"],["Computing concepts","Understands data, networks and the impact of computing"],["Collaboration","Pair programs and reviews code constructively"]],
+    bh: ["Tests code before submitting"] },
+  { key: "other", label: "Other", types: ["Assignment","Test","Quiz","Homework","Project","Presentation","Other"],
+    ms: [["Content knowledge","Understands key ideas of the course"],["Critical thinking","Analyzes and evaluates information"],["Written communication","Writes clearly and accurately"],["Oral communication","Speaks clearly and listens actively"],["Problem solving","Tackles new problems with a plan"],["Collaboration","Contributes to group work"]],
+    bh: [] }
+];
+const subjOf = c => SUBJECTS.find(x => x.key === c?.subject);
+const typesOf = c => (c?.types?.length ? c.types : (subjOf(c)?.types || TYPES));
+const kitBehaviors = sub => [...BASE_BEHAVIORS, ...(sub?.bh || [])];
 const DEFAULT_PROMPT = "Write a report card comment for each student below. Use only the information provided; do not invent achievements or scores. For each student, write 3 to 5 sentences in a warm, professional voice: name one specific strength, one area for growth, and one concrete next step. Use the student's first name and pronouns. Mention numbers only when they make the comment clearer.";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -258,7 +311,7 @@ function newClassObj(name){
 
 function sampleClass(){
   const c = newClassObj("English 10, Period 3 (example)");
-  c.example = true; c.period = "Quarter 1";
+  c.example = true; c.period = "Quarter 1"; c.subject = "english";
   const A = (name, type, max) => ({ id: uid(), name, type, max });
   c.assignments = [A("Personal narrative","Essay",100), A("Of Mice and Men, ch. 1–3","Quiz",10), A("Of Mice and Men, ch. 4–6","Quiz",10), A("Literary analysis paragraph","Essay",20), A("Reading log, weeks 1–3","Homework",""), A("Vocabulary set 1","Homework","")];
   c.milestones = [
@@ -345,8 +398,12 @@ function renderSetup(){
   m.innerHTML = `
   ${cls.example ? `<div class="banner"><p><strong>This is an example class</strong> with made-up students so you can try every step. Create your own class when you're ready, or pick up where you left off.</p><button class="btn small" data-resume>Resume from a save code</button><span id="exDel"></span></div>` : ""}
   <div class="setup">
-    <section class="panel">
+    <section class="panel" id="classPanel">
       <header><h2>Class</h2></header>
+      <div class="field" id="subjectPick"><span>What do you teach? Pick one to load matching starter kits.</span>
+        <div class="subjects">${SUBJECTS.map(x => `<button class="chip" data-subject="${x.key}" aria-pressed="${cls.subject === x.key}">${esc(x.label)}</button>`).join("")}</div>
+      </div>
+      <div id="kitBox"></div>
       <div class="two">
         <label class="field">Class name<input type="text" id="c-name" value="${esc(cls.name)}" placeholder="English 10, Period 3"></label>
         <label class="field">Grading period<input type="text" id="c-period" value="${esc(cls.period)}" placeholder="Quarter 1"></label>
@@ -355,7 +412,7 @@ function renderSetup(){
       <div class="copyslot" hidden></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="rosterPanel">
       <header><h2>Roster</h2><span class="hint">${cls.students.length} students</span></header>
       <p class="hint">Upload a CSV, or paste names one per line in any common format: "Maya Rivera", "Rivera, Maya", "RIVERA Maya", or columns copied from a spreadsheet. Pronouns and student IDs on the same line are picked up too. You'll see a preview before anything is added.</p>
       <div class="actions">
@@ -379,21 +436,23 @@ function renderSetup(){
       <div class="rows" id="stuRows"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="asgPanel">
       <header><h2>Major assignments</h2><button class="btn small" id="addAsg">Add assignment</button></header>
       <p class="hint">Points are optional. Leave them blank to rate the assignment with buttons only.</p>
+      <label class="field">Assignment categories for the Type menu, separated by commas<input type="text" id="c-types" value="${esc(typesOf(cls).join(", "))}"></label>
+      ${cls.typesCustom && subjOf(cls) ? `<div class="actions"><button class="btn small ghost" id="resetTypes">Reset to ${esc(subjOf(cls).label)} categories</button></div>` : ""}
       <div class="row asg"><span class="colhead">Assignment</span><span class="colhead">Type</span><span class="colhead max">Points</span><span></span></div>
       <div class="rows" id="asgRows"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="msPanel">
       <header><h2>Learning milestones</h2><button class="btn small" id="addMs">Add milestone</button></header>
       <p class="hint">The skills students are working toward this grading period.</p>
       <div class="rows" id="msRows"></div>
-      <div class="actions"><button class="btn small" id="starter">Add English starter set</button></div>
+      <div class="actions"><button class="btn small" id="starter">Add ${esc(subjOf(cls)?.label || "English")} starter set</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="bhPanel">
       <header><h2>Classroom behaviors <small class="hint">(optional)</small></h2><button class="btn small" id="addBh">Add behavior</button></header>
       <div class="rows" id="bhRows"></div>
       <div class="actions"><button class="btn small" id="bhStarter">Add behavior starter set</button></div>
@@ -426,7 +485,7 @@ function renderSetup(){
   renderList("asgRows", cls.assignments, a => `
     <div class="row asg" data-id="${a.id}">
       <input type="text" data-f="name" value="${esc(a.name)}" aria-label="Assignment name" placeholder="Assignment name">
-      <select data-f="type" aria-label="Type">${TYPES.map(t => `<option${t === a.type ? " selected" : ""}>${t}</option>`).join("")}</select>
+      <select data-f="type" aria-label="Type">${[...new Set([...typesOf(cls), a.type].filter(Boolean))].map(t => `<option${t === a.type ? " selected" : ""}>${t}</option>`).join("")}</select>
       <input type="number" class="max" data-f="max" value="${esc(a.max)}" min="0" aria-label="Points possible" placeholder="—">
       <button class="btn ghost small" data-del aria-label="Remove ${esc(a.name)}">✕</button>
     </div>`);
@@ -444,29 +503,65 @@ function renderSetup(){
   renderStudents();
 
   const add = (list, obj, rowsId) => () => { list.push(obj()); saveClass(); renderSetup(); const last = document.querySelector(`#${rowsId} .row:last-child input`); last?.focus(); };
-  $("#addAsg").addEventListener("click", add(cls.assignments, () => ({ id: uid(), name: "", type: "Essay", max: "" }), "asgRows"));
+  $("#addAsg").addEventListener("click", add(cls.assignments, () => ({ id: uid(), name: "", type: typesOf(cls)[0], max: "" }), "asgRows"));
   $("#addMs").addEventListener("click", add(cls.milestones, () => ({ id: uid(), name: "", desc: "" }), "msRows"));
   $("#addBh").addEventListener("click", add(cls.behaviors, () => ({ id: uid(), name: "" }), "bhRows"));
   $("#addStu").addEventListener("click", add(cls.students, () => ({ id: uid(), first: "", last: "", pronouns: "", sid: "" }), "stuRows"));
   $("#starter").addEventListener("click", () => {
-    const have = new Set(cls.milestones.map(x => x.name.toLowerCase()));
-    [["Close reading","Notices word choice, imagery and tone and explains their effect"],["Thesis writing","States a clear, arguable claim"],["Using textual evidence","Selects and integrates relevant quotations"],["Analysis","Explains how evidence supports the claim"],["Organization","Logical paragraphs and transitions"],["Conventions","Grammar, punctuation and MLA format"],["Discussion","Builds on others' ideas with evidence"]]
-      .filter(([n]) => !have.has(n.toLowerCase())).forEach(([name, desc]) => cls.milestones.push({ id: uid(), name, desc }));
-    saveClass(); renderSetup(); toast("Starter milestones added");
+    const n = addKit(subjOf(cls) || SUBJECTS[0], true, false);
+    saveClass(); renderSetup(); toast(n ? `Added ${n} milestones` : "Those milestones are already on the list");
   });
   $("#bhStarter").addEventListener("click", () => {
-    const have = new Set(cls.behaviors.map(x => x.name.toLowerCase()));
-    const add = ["Stays on task", "Does not create distractions for others", "Positive attitude and ready to learn", "Completes work on time", "Completes work thoroughly", "Participates in class discussion", "Comes prepared with materials", "Works well with peers", "Uses feedback to improve", "Respectful to classmates and teacher"]
-      .filter(n => !have.has(n.toLowerCase()));
-    add.forEach(name => cls.behaviors.push({ id: uid(), name }));
-    saveClass(); renderSetup(); toast(add.length ? `Added ${add.length} behaviors. Remove any you don't need.` : "Those behaviors are already on the list");
+    const n = addKit(subjOf(cls), false, true);
+    saveClass(); renderSetup(); toast(n ? `Added ${n} behaviors. Remove any you don't need.` : "Those behaviors are already on the list");
   });
+  drawKitBox();
+  $("#subjectPick").onclick = e => { const b = e.target.closest("[data-subject]"); if (b) chooseSubject(b.dataset.subject); };
+  $("#c-types").addEventListener("change", e => {
+    const v = e.target.value.split(",").map(x => x.trim()).filter(Boolean);
+    if (!v.length) { e.target.value = typesOf(cls).join(", "); return; }
+    cls.types = v; cls.typesCustom = true; saveClass(); renderSetup(); toast("Assignment categories updated");
+  });
+  $("#resetTypes")?.addEventListener("click", () => { cls.types = [...subjOf(cls).types]; cls.typesCustom = false; saveClass(); renderSetup(); toast("Categories reset"); });
   $("#pasteToggle").addEventListener("click", () => { const b = $("#pasteBox"); b.hidden = !b.hidden; if (!b.hidden) $("#pasteText").focus(); });
   $("#pasteAdd").addEventListener("click", () => previewRoster($("#pasteText").value));
   $("#rosterFile").addEventListener("change", e => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader(); r.onload = () => previewRoster(String(r.result)); r.readAsText(f); e.target.value = "";
   });
+}
+
+// Add a subject's milestones and/or behaviors, skipping ones already on the list. Returns how many were added.
+function addKit(sub, ms, bh){
+  let n = 0;
+  if (ms && sub) { const have = new Set(cls.milestones.map(x => x.name.toLowerCase())); sub.ms.filter(([nm]) => !have.has(nm.toLowerCase())).forEach(([name, desc]) => { cls.milestones.push({ id: uid(), name, desc }); n++; }); }
+  if (bh) { const have = new Set(cls.behaviors.map(x => x.name.toLowerCase())); kitBehaviors(sub).filter(nm => !have.has(nm.toLowerCase())).forEach(name => { cls.behaviors.push({ id: uid(), name }); n++; }); }
+  return n;
+}
+const sameNames = (list, names) => list.length === names.length && list.every((x, i) => x.name === names[i]);
+function chooseSubject(key){
+  const sub = SUBJECTS.find(x => x.key === key); if (!sub || cls.subject === key) return;
+  const prev = cls.kit;
+  cls.subject = key;
+  if (!cls.typesCustom) cls.types = [...sub.types];
+  // Swap out the previous kit if the teacher hasn't changed it; never touch lists they've edited.
+  const msFresh = !cls.milestones.length || (prev && sameNames(cls.milestones, prev.ms));
+  const bhFresh = !cls.behaviors.length || (prev && sameNames(cls.behaviors, prev.bh));
+  if (msFresh) cls.milestones = sub.ms.map(([name, desc]) => ({ id: uid(), name, desc }));
+  if (bhFresh) cls.behaviors = kitBehaviors(sub).map(name => ({ id: uid(), name }));
+  cls.kit = { ms: msFresh ? cls.milestones.map(x => x.name) : prev?.ms || [], bh: bhFresh ? cls.behaviors.map(x => x.name) : prev?.bh || [] };
+  saveClass(); renderSetup();
+  toast(msFresh || bhFresh ? `${sub.label} starter kit loaded. Edit anything below.` : `${sub.label} selected. Your own milestones and behaviors were kept.`);
+}
+function drawKitBox(){
+  const sub = subjOf(cls), box = $("#kitBox"); if (!box) return;
+  if (!sub) { box.innerHTML = `<p class="hint">Your subject sets the assignment categories, learning milestones and behaviors you start with. You can change all of them afterward.</p>`; return; }
+  const haveMs = new Set(cls.milestones.map(x => x.name.toLowerCase())), haveBh = new Set(cls.behaviors.map(x => x.name.toLowerCase()));
+  const missMs = sub.ms.filter(([n]) => !haveMs.has(n.toLowerCase())).length, missBh = kitBehaviors(sub).filter(n => !haveBh.has(n.toLowerCase())).length;
+  box.innerHTML = `<div class="kit"><p class="msg"><strong>${esc(sub.label)} starter kit</strong>: ${sub.types.length} assignment categories, ${sub.ms.length} learning milestones and ${kitBehaviors(sub).length} behaviors.</p>
+    ${missMs || missBh ? `<div class="actions"><span class="hint">${[missMs && `${missMs} milestones`, missBh && `${missBh} behaviors`].filter(Boolean).join(" and ")} from this kit aren't on your lists yet.</span><button class="btn small" id="kitAdd">Add them</button></div>` : `<p class="hint" style="margin:0">Everything from this kit is on your lists. Edit or remove anything you don't use.</p>`}
+  </div>`;
+  $("#kitAdd")?.addEventListener("click", () => { const n = addKit(sub, true, true); saveClass(); renderSetup(); toast(`Added ${n} items from the ${sub.label} kit`); });
 }
 
 let picked = new Set();
@@ -929,7 +1024,7 @@ let railT; function renderRailSoon(){ clearTimeout(railT); railT = setTimeout(re
 
 /* ---------- summaries ---------- */
 const num = v => { const n = parseFloat(String(v ?? "").replace("%", "")); return isFinite(n) ? n : null; };
-const plural = (t) => ({ Essay: "Essays", Quiz: "Quizzes", Homework: "Homework", Test: "Tests", Project: "Projects", Presentation: "Presentations", Other: "Other work" })[t] || t;
+const plural = (t) => ({ Essay: "Essays", Quiz: "Quizzes", Homework: "Homework", Test: "Tests", Project: "Projects", Presentation: "Presentations", Other: "Other work", Participation: "Participation", Sketchbook: "Sketchbook work", Rehearsal: "Rehearsals", Lab: "Labs", DBQ: "DBQs" })[t] || (/s$/i.test(t) ? t : t + "s");
 
 function summary(s, opts = exportOpts){
   const m = marks[s.id] || { a: {}, m: {}, b: {} };
@@ -1179,7 +1274,8 @@ function importCode(text, confirmed){
 function showWelcome(){
   if (LS.get("welcomed")) return;
   const w = $("#welcome"); w.hidden = false; $("#welcomeOk").focus();
-  $("#welcomeOk").onclick = () => { w.hidden = true; LS.set("welcomed", true); };
+  $("#welcomeOk").onclick = () => { w.hidden = true; LS.set("welcomed", true); startTour(); };
+  $("#welcomeSkip").onclick = () => { w.hidden = true; LS.set("welcomed", true); toast("You can take the tour anytime from the Tour button"); };
 }
 
 /* ---------- copy a class to a new class ---------- */
@@ -1206,7 +1302,7 @@ function drawCopyForm(slot){
   $("#cp-go", slot).onclick = () => {
     const c = newClassObj($("#cp-name", slot).value.trim() || "New class");
     c.period = $("#cp-period", slot).value.trim();
-    c.scale = [...cls.scale]; c.freq = [...cls.freq];
+    c.scale = [...cls.scale]; c.freq = [...cls.freq]; c.subject = cls.subject; c.types = cls.types ? [...cls.types] : undefined; c.typesCustom = cls.typesCustom;
     const dup = arr => arr.map(x => ({ ...x, id: uid() }));
     if ($("#cp-asg", slot).checked) c.assignments = dup(cls.assignments);
     if ($("#cp-ms", slot).checked) c.milestones = dup(cls.milestones);
@@ -1218,6 +1314,68 @@ function drawCopyForm(slot){
     toast(`Created ${c.name}`);
   };
 }
+
+/* ---------- guided tour ---------- */
+const TOUR = [
+  { view: "setup", sel: "#subjectPick", title: "1. Pick your subject", text: "Click your subject once. The assignment categories, learning milestones and behaviors fill in with a matching starter kit, and you can edit all of them." },
+  { view: "setup", sel: "#asgPanel", title: "2. Add your major assignments", text: "List the big assignments for this grading period. Points are optional. Edit the categories here if your department uses different ones." },
+  { view: "setup", sel: "#msPanel", title: "3. Learning milestones", text: "These are the skills students are working toward. Keep the starter set, edit it, or add your own. Classroom behaviors, just below, are optional." },
+  { view: "setup", sel: "#rosterPanel", title: "4. Add your students", text: "Upload a roster CSV or paste names straight from your gradebook. You'll see a preview before anything is added, and you can set pronouns for many students at once." },
+  { view: "rate", sel: ".modebar", title: "5. Choose how to rate", text: "Go student by student, or assignment by assignment like a gradebook column. Both edit the same data, so switch whenever you like." },
+  { view: "rate", sel: "#sheet .item", title: "6. Click to rate", text: "Type a score, click a rating, flag late or missing work, and add a short note. In assignment mode, press Enter to jump to the next student." },
+  { view: "export", sel: "#copyAll", title: "7. Export for your comments", text: "Copy everything, with ready-made instructions, and paste it into an AI chat to draft comments. Or download a CSV with one row per student." },
+  { view: null, sel: "#saveBtn", title: "8. Save before you leave", text: "Nothing is stored online. Click Save progress to download a save file, and load it next time to pick up where you left off." },
+  { view: null, sel: "#helpBtn", title: "That's it!", text: "This example class has made-up students so you can practice. When you're ready, click New class to start your own. Replay this tour anytime from here." }
+];
+let tourStep = -1, tourEls = null;
+function startTour(){ tourStep = 0; showTourStep(); }
+function endTour(){
+  tourStep = -1; tourEls?.ring.remove(); tourEls?.pop.remove(); tourEls = null;
+  window.removeEventListener("resize", placeTour); window.removeEventListener("scroll", placeTour, true);
+  LS.set("toured", true);
+}
+function showTourStep(){
+  const st = TOUR[tourStep];
+  if (st.view && view !== st.view) go(st.view);
+  if (!tourEls) {
+    const ring = document.createElement("div"); ring.className = "tour-ring";
+    const pop = document.createElement("div"); pop.className = "tour-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-live", "polite");
+    document.body.append(ring, pop); tourEls = { ring, pop };
+    window.addEventListener("resize", placeTour); window.addEventListener("scroll", placeTour, true);
+  }
+  const last = tourStep === TOUR.length - 1;
+  tourEls.pop.innerHTML = `<h3>${esc(st.title)}</h3><p>${esc(st.text)}</p>
+    <div class="tour-foot"><span class="ct">${tourStep + 1} of ${TOUR.length}</span>
+      <span class="actions">${last ? "" : `<button class="btn small ghost" data-t="skip">Skip tour</button>`}${tourStep ? `<button class="btn small" data-t="back">Back</button>` : ""}<button class="btn small primary" data-t="next">${last ? "Finish" : "Next"}</button></span></div>`;
+  tourEls.pop.onclick = e => {
+    const t = e.target.closest("[data-t]")?.dataset.t; if (!t) return;
+    if (t === "skip" || (t === "next" && last)) return endTour();
+    tourStep += t === "next" ? 1 : -1; showTourStep();
+  };
+  const el = $(st.sel);
+  el?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  placeTour(); setTimeout(placeTour, 350);
+  tourEls.pop.querySelector('[data-t="next"]').focus({ preventScroll: true });
+}
+function placeTour(){
+  if (!tourEls || tourStep < 0) return;
+  const { ring, pop } = tourEls, el = $(TOUR[tourStep].sel);
+  const vw = innerWidth, vh = innerHeight, pw = pop.offsetWidth, ph = pop.offsetHeight;
+  if (!el) { ring.style.cssText = "top:50%;left:50%;width:0;height:0"; pop.style.left = (vw - pw) / 2 + "px"; pop.style.top = (vh - ph) / 2 + "px"; return; }
+  const r = el.getBoundingClientRect(), pad = 6;
+  Object.assign(ring.style, { top: r.top - pad + "px", left: r.left - pad + "px", width: r.width + pad * 2 + "px", height: r.height + pad * 2 + "px" });
+  let top = r.bottom + 14;
+  if (top + ph > vh - 12) top = r.top - ph - 14;
+  if (top < 12) top = Math.max(12, Math.min(vh - ph - 12, r.top + 12));
+  const left = Math.max(16, Math.min(vw - pw - 16, r.left));
+  pop.style.top = top + "px"; pop.style.left = left + "px";
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && tourStep >= 0) endTour(); });
+$("#helpBtn").addEventListener("click", () => {
+  // The tour works best on a class with students and assignments to point at.
+  const ex = index.classes.find(c => c.name.endsWith("(example)"));
+  if (ex && cls.id !== ex.id && (!cls.students.length || !totalItems())) openClass(ex.id).then(startTour); else startTour();
+});
 
 boot().then(showWelcome);
 renderSaveBtn();

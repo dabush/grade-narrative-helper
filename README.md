@@ -6,7 +6,10 @@ A free tool for teachers who write report card comments. Click through ratings f
 
 ## How it works
 
-1. **Set up:** add your major assignments, the learning milestones students are working toward, and, optionally, the classroom behaviors you look for. Starter sets for English and for behaviors are one click away. Then upload or paste your roster.
+A short guided tour runs on your first visit, and you can replay it anytime from the **Tour** button.
+
+
+1. **Set up:** pick your subject with one click (English, Math, Biology, Chemistry, Physics, History & Social Studies, World Language, Visual Art, Music, PE & Health, Computer Science or Other) to load a matching starter kit of assignment categories, learning milestones and classroom behaviors. Edit any of them, add your major assignments, then upload or paste your roster.
 2. **Rate students:** go student by student, or assignment by assignment like a gradebook column. Enter scores, click rating buttons, flag late or missing work, and add a short note.
 3. **Export:** copy every student's data, with ready-made instructions for the AI, or download a CSV with one row per student.
 
